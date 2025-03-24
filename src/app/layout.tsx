@@ -4,6 +4,8 @@ import QueryProvider from "@/providers/query-provider";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,12 +30,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <QueryProvider>
-          <TooltipProvider>
-            <Toaster position="bottom-right" />
-            {children}
-          </TooltipProvider>
-        </QueryProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <main className="w-full">
+            <SidebarTrigger />
+            <QueryProvider>
+              <TooltipProvider>
+                <Toaster position="bottom-right" />
+                {children}
+              </TooltipProvider>
+            </QueryProvider>
+          </main>
+        </SidebarProvider>
+
       </body>
     </html>
   );

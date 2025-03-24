@@ -66,7 +66,7 @@ export default function ExamsPage() {
 	]
   return (
 	<div className="flex flex-row justify-center items-center">
-		<div className="w-1/2 items-center text-center">
+		<div className="w-3xl items-center text-center">
 			<h1>Exams Page</h1>
 			<div className="grid grid-cols-2 w-full gap-4 place-items-center">
 				{sampleExams.map((exam) => (
