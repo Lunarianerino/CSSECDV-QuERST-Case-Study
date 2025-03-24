@@ -3,15 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import ExamCard from "@/components/exams/ExamCard";
 
 const StatusCircle = ({ status }: { status: string }) => {
   const circleColor = {
@@ -32,56 +24,60 @@ export default function ExamsPage() {
   const router = useRouter();
 	const sampleExams = [
 		{
-			id: 1,
+			id: "1",
 			title: "Personality Exam",
 			description: "A test to measure your personality traits",
 			date: "2023-05-01",
-			status: "Finished"
+			status: "Finished",
+			results: "Not Graded"
+
 		},
 		{
-			id: 2,
+			id: "2",
 			title: "Learning/Teaching Style Exam",
 			description: "A test to determine your learning/teaching style",	
-			status: "Not Started"
+			status: "Not Started",
 		},
 		{
-			id: 3,
+			id: "3",
 			title: "Mathematics Competency Exam",
 			description: "A test to measure your cognitive ability",
-			status: "Started"
+			status: "Started",
+			maxScore: 100
+		},
+		{
+			id: "4",
+			title: "English Language Exam",
+			description: "A test to measure your English language proficiency",
+			status: "Finished",
+			score: 90,
+			maxScore: 100,
+			results: "Passed"
+		},
+		{
+			id: "5",
+			title: "Science Competency Exam",
+			description: "A test to measure your scientific knowledge",
+			status: "Finished",
+			score: 20,
+			maxScore: 100,
+			results: "Failed"
 		}
 	]
   return (
-    <div>
-      <h1>Exams Page</h1>
-			<Table>
-				<TableCaption>The list of examinations</TableCaption>
-				<TableHeader>
-					<TableRow>
-						<TableHead>Title</TableHead>
-						<TableHead>Status</TableHead>
-						<TableHead>Date Started</TableHead>
-						<TableHead>Date Finished</TableHead>
-						<TableHead>Action</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{sampleExams.map((exam) => (
-						<TableRow key={exam.id}>
-							<TableCell>{exam.title}</TableCell>
-							<TableCell><StatusCircle status={exam.status} /></TableCell>
-							<TableCell>{exam.date || "-"}</TableCell>
-							<TableCell>Not finished</TableCell>
-							<TableCell>
-								<Button>{exam.status == "Not Started"}</Button>
-							</TableCell>
-						</TableRow>
-					))}
-				</TableBody>
-			</Table>
-      <Button onClick={() => router.push("/")}>
-        Back to home
-      </Button>
-    </div>
+	<div className="flex flex-row justify-center items-center">
+		<div className="w-1/2 items-center text-center">
+			<h1>Exams Page</h1>
+			<div className="grid grid-cols-2 w-full gap-4 place-items-center">
+				{sampleExams.map((exam) => (
+				<ExamCard key={exam.id} {...exam} />
+				))}
+			</div>
+			<Button onClick={() => router.push("/")}>
+				Back to home
+			</Button>
+		</div>
+	</div>
+
   );
 }
