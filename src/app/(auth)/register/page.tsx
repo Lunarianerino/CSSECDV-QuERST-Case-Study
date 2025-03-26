@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import Link from 'next/link'
 const Page = async () => {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b p-4">
       <Card className="w-full max-w-md mb-8">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold tracking-tight">Welcome Tutor/Student!</CardTitle>

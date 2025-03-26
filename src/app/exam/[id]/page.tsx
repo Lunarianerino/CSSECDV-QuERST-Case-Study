@@ -41,10 +41,9 @@ const ExamContent = () => {
   const allQuestionsAnswered = answeredCount === questions.length;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* Main content area - Questions */}
-      <div 
-        ref={containerRef} 
+    <div className="flex h-screen overflow-hidden">
+      <div
+        ref={containerRef}
         className="flex-1 overflow-y-auto px-6 py-8 md:px-8 lg:px-12"
       >
         <div className="max-w-3xl mx-auto">
@@ -60,27 +59,27 @@ const ExamContent = () => {
             choices={currentQuestion.choices}
             selectedAnswer={answers[currentQuestion.id]}
           />
-          
+
           <div className="flex justify-between mt-8 mb-20">
-            <Button 
-              variant="outline" 
-              onClick={handlePrevious} 
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
               disabled={currentQuestionIndex === 0}
               className="transition-all"
             >
               Previous
             </Button>
-            
+
             {isLastQuestion ? (
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 className="bg-primary text-primary-foreground transition-all"
               >
                 Submit Exam
               </Button>
             ) : (
-              <Button 
-                onClick={handleNext} 
+              <Button
+                onClick={handleNext}
                 variant="outline"
                 className="transition-all"
               >
@@ -88,8 +87,7 @@ const ExamContent = () => {
               </Button>
             )}
           </div>
-          
-          {/* Submit button fixed at bottom */}
+
           <div className="fixed bottom-0 left-0 right-0 glass-morphism py-4 z-10 border-t">
             <div className="max-w-5xl mx-auto px-6 flex justify-between items-center">
               <div>
@@ -97,8 +95,8 @@ const ExamContent = () => {
                   <span className="font-medium text-foreground">{answeredCount}</span> of <span className="font-medium text-foreground">{questions.length}</span> questions answered
                 </p>
               </div>
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 className={cn(
                   "bg-primary text-primary-foreground transition-all",
                   allQuestionsAnswered && "animate-pulse-subtle"
@@ -111,8 +109,7 @@ const ExamContent = () => {
           </div>
         </div>
       </div>
-      
-      {/* Right sidebar - Progress tracker */}
+
       <aside className="hidden md:block w-80 lg:w-96 border-l border-border/50 bg-secondary/20 p-6 overflow-y-auto">
         <ProgressPanel />
       </aside>
@@ -122,9 +119,11 @@ const ExamContent = () => {
 
 const ExamPage = () => {
   return (
-    <ExamProvider>
-      <ExamContent />
-    </ExamProvider>
+    <main>
+      <ExamProvider>
+        <ExamContent />
+      </ExamProvider>
+    </main>
   );
 };
 

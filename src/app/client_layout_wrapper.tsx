@@ -22,11 +22,11 @@ export default function ClientLayoutWrapper({
   const pathname = usePathname();
   const showSidebar = shouldShowSidebar(pathname);
   console.log("showSidebar", showSidebar); // Add this line to log the value of showSidebar
-
+  const theme = "dark";
   if (showSidebar)
   {
     return (
-      <html lang="en">
+      <html lang="en" className={theme}>
         <body>
           <SidebarProvider>
             <AppSidebar />
@@ -47,7 +47,7 @@ export default function ClientLayoutWrapper({
   }
 
   return (
-      <html lang="en">
+      <html lang="en" className={theme}>
         <body>
             <main className="w-full">
               <QueryProvider>

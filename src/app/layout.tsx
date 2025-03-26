@@ -25,11 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
         <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
-      </body>
-    </html>
   );
 }
 

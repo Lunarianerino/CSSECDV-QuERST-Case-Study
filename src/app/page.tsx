@@ -37,7 +37,7 @@ export default function Page() {
             </Breadcrumb>
           </div>
         </header> */}
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+      <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="text-center max-w-2xl animate-fade-in">
           <h1 className="text-4xl font-medium mb-6 tracking-tight">QuERST-SyMM</h1>
           <p className="text-xl text-muted-foreground mb-8">

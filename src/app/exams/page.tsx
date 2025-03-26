@@ -1,27 +1,11 @@
 
 "use client";
-
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import ExamCard from "@/components/exams/ExamCard";
 
-const StatusCircle = ({ status }: { status: string }) => {
-  const circleColor = {
-    "Finished": "bg-green-500",
-    "Started": "bg-yellow-500",
-    "Not Started": "bg-red-500"
-  }[status] || "bg-gray-500";
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className={`w-3 h-3 rounded-full ${circleColor}`} />
-      {status}
-    </div>
-  );
-};
-
 export default function ExamsPage() {
-  const router = useRouter();
+	const router = useRouter();
 	const sampleExams = [
 		{
 			id: "1",
@@ -35,7 +19,7 @@ export default function ExamsPage() {
 		{
 			id: "2",
 			title: "Learning/Teaching Style Exam",
-			description: "A test to determine your learning/teaching style",	
+			description: "A test to determine your learning/teaching style",
 			status: "Not Started",
 		},
 		{
@@ -64,20 +48,23 @@ export default function ExamsPage() {
 			results: "Failed"
 		}
 	]
-  return (
-	<div className="flex flex-row justify-center items-center">
-		<div className="w-3xl items-center text-center">
-			<h1>Exams Page</h1>
-			<div className="grid grid-cols-2 w-full gap-4 place-items-center">
-				{sampleExams.map((exam) => (
-				<ExamCard key={exam.id} {...exam} />
-				))}
+	return (
+		<main>
+			<div className="flex flex-row justify-center items-center">
+				<div className="w-3xl items-center text-center">
+					<h1>Exams Page</h1>
+					<div className="grid grid-cols-2 w-full gap-4 place-items-center">
+						{sampleExams.map((exam) => (
+							<ExamCard key={exam.id} {...exam} />
+						))}
+					</div>
+					<Button onClick={() => router.push("/")}>
+						Back to home
+					</Button>
+				</div>
 			</div>
-			<Button onClick={() => router.push("/")}>
-				Back to home
-			</Button>
-		</div>
-	</div>
+		</main>
 
-  );
+
+	);
 }
