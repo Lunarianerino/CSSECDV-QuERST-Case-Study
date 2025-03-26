@@ -19,14 +19,13 @@ export const authOptions: NextAuthOptions = {
         }).select("+password");
 
         if (!user) throw new Error("Wrong Email");
-
         const passwordMatch = await compare(
-          credentials!.password,
-          user.password
+          credentials!.password.toString(),
+          user.password,
         );
-
+        
         if (!passwordMatch) throw new Error("Wrong Password");
-        return user;
+        return user.toJSON();
       },
     }),
   ],

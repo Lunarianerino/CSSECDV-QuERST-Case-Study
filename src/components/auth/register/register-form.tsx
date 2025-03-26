@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { register } from "@/lib/server/actions/register";
+import { signIn } from "next-auth/react";
 import {
   Form,
   FormControl,
@@ -49,8 +50,21 @@ export default function RegisterForm() {
         email: data.email,
         password: data.password,
       });
-      ref.current?.reset();
-      //TODO: login the user
+      if (!r.success) {
+        toast.error(r.message);
+        return;
+      }
+      const logiRes = await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      })
+
+      if (logiRes?.error) {
+        toast.error(logiRes.error);
+        // router.push("/login");
+        return; 
+      }
 
       toast.success("Registration successful!");
       router.push("/onboarding");

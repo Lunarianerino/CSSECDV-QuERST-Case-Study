@@ -1,10 +1,10 @@
 "use server";
 import { connectToMongoDB } from "@/lib/db";
 import Account from "@/models/account";
-import { hash } from "bcrypt-ts";
+import { hash, compare } from "bcrypt-ts";
 
 export const register = async (values: any) => {
-  const { email, password, name, type } = values;
+  const { email, password, name } = values;
 
   try {
       await connectToMongoDB();
@@ -12,15 +12,16 @@ export const register = async (values: any) => {
       if(userFound){
         throw new Error("User already exists");
       }
-      const hashedPassword = await hash(password, 10);
       const user = new Account({
         name,
         email,
-        password: hashedPassword,
-        type
+        password,
       });
       const savedUser = await user.save();
-      return savedUser.toObject();
+      return {
+        success: true,
+        message: "User created successfully",
+      };
   }catch(e){
       console.log(e);
       throw e;
