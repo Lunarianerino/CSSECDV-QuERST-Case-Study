@@ -62,7 +62,7 @@ export default function RegisterForm() {
 
       if (logiRes?.error) {
         toast.error(logiRes.error);
-        // router.push("/login");
+        router.push("/login");
         return; 
       }
 
