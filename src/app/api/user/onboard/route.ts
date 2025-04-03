@@ -4,9 +4,10 @@ import { authOptions } from '@/lib/auth';
 import { connectToMongoDB } from '@/lib/db';
 import Account from '@/models/account';
 import { onboardingSchema } from '@/lib/validations/auth';
-
+//TODO: Replace with a server action
 export async function POST(request: NextRequest) {
   try {
+    //! There might be no need for this to be an API route, oops lol
     // Get the current session
     const session = await getServerSession(authOptions);
     

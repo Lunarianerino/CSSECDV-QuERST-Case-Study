@@ -5,7 +5,7 @@ import { getToken } from 'next-auth/jwt';
 // Explicitly define routes that require auth and onboarding
 const protectedRoutes = ['/dashboard', '/exams', '/exam'];
 const authPages = ['/login', '/register'];
-
+const adminRoutes = ['/admin']
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -29,6 +29,13 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = authPages.includes(pathname);
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
   const isOnboardingPage = pathname === '/onboarding';
+  const isAdmin = token?.type === 'admin';
+  const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
+
+  // 🚫 Redirect non-admin admin users trying to access admin routes
+  if (!isAdmin && isAdminRoute) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
 
   // 🔒 Redirect unauthenticated users trying to access protected pages
   if (isProtectedRoute && !isAuth) {

@@ -6,67 +6,57 @@ import * as z from "zod";
 import { Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-
+import { examSchema, examQuestionSchema, questionChoiceSchema, ExamFormValues, ExamQuestionFormValues, QuestionChoiceFormValues } from "@/lib/validations/exams";
+import { createExam } from "@/lib/server/actions/exam";
+import { Switch } from "@/components/ui/switch";
 // Define types for the form
-type Choice = {
-  id: string;
-  text: string;
-  isCorrect: boolean;
-};
-
-type Question = {
-  id: string;
-  text: string;
-  points: number;
-  choices: Choice[];
-};
 
 // Define schemas for validation
-const formSchema = z.object({
-  title: z.string().min(3, { message: "Title must be at least 3 characters" }),
-  description: z.string().min(10, { message: "Description must be at least 10 characters" }),
-});
-
+//TODO: pag may time, separate the exam details card and the questions card into separate components, and replace exam details card with questions card when exam details are confirmed
 const CreateExam = () => {
   const router = useRouter();
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<ExamQuestionFormValues[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<string>("");
   const [currentPoints, setCurrentPoints] = useState<number>(1);
-  const [choices, setChoices] = useState<Choice[]>([]);
+  const [choices, setChoices] = useState<QuestionChoiceFormValues[]>([]);
   const [currentChoice, setCurrentChoice] = useState<string>("");
 
   // Configure form
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<ExamFormValues>({
+    resolver: zodResolver(examSchema),
     defaultValues: {
-      title: "",
+      name: "",
       description: "",
+      required: false,
+      graded: false,
+      questions: [],
     },
   });
 
   // Handler for adding a new choice
   const addChoice = () => {
     if (!currentChoice.trim()) return;
-    
-    const newChoice: Choice = {
-      id: Date.now().toString(),
+
+    const newChoice: QuestionChoiceFormValues = {
+      id: crypto.randomUUID(), // Generate a unique ID
       text: currentChoice,
       isCorrect: false,
     };
-    
+
     setChoices([...choices, newChoice]);
     setCurrentChoice("");
   };
@@ -79,9 +69,9 @@ const CreateExam = () => {
   // Handler for toggling correct answer
   const toggleCorrect = (id: string) => {
     setChoices(
-      choices.map(choice => 
-        choice.id === id 
-          ? { ...choice, isCorrect: !choice.isCorrect } 
+      choices.map(choice =>
+        choice.id === id
+          ? { ...choice, isCorrect: !choice.isCorrect }
           : choice
       )
     );
@@ -99,10 +89,10 @@ const CreateExam = () => {
       return;
     }
 
-    const newQuestion: Question = {
-      id: Date.now().toString(),
-      text: currentQuestion,
-      points: currentPoints,
+    const newQuestion: ExamQuestionFormValues = {
+      id: crypto.randomUUID(), // Generate a unique ID
+      question: currentQuestion,
+      type: "choice",
       choices: [...choices],
     };
 
@@ -114,30 +104,42 @@ const CreateExam = () => {
   };
 
   // Handler for removing a question
-  const removeQuestion = (id: string) => {
-    setQuestions(questions.filter(question => question.id !== id));
+  const removeQuestion = (index: string) => {
+    const idx = parseInt(index);
+    setQuestions(questions.filter((_, i) => i !== idx));
     toast.success("Question removed");
   };
 
   // Handle form submission
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: ExamFormValues) => {
     if (questions.length === 0) {
       toast.error("You must add at least one question");
       return;
     }
 
     // Here you would typically save the exam to your backend
-    console.log("Exam data:", { ...data, questions });
-    
+    const examData = {
+      ...data,
+      questions: questions
+    };
+    console.log("Exam data:", examData);
+    const results = await createExam(examData);
+    if (results.status !== 200) {
+      toast.error("Failed to create exam");
+      console.log(results);
+      return;
+    }
+
     toast.success("Exam created successfully");
-    router.push("/admin/exams");
+    //TODO: ideally, iba dapat to for admins
+    router.push("/exams");
   };
 
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <h1 className="text-3xl font-semibold tracking-tight mb-6">Create New Exam</h1>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Card>
@@ -147,7 +149,7 @@ const CreateExam = () => {
               <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="title"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Title</FormLabel>
@@ -166,20 +168,80 @@ const CreateExam = () => {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Enter exam description" 
-                          className="min-h-[100px]" 
-                          {...field} 
+                        <Textarea
+                          placeholder="Enter exam description"
+                          className="min-h-[100px]"
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="graded"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Graded Exam</FormLabel>
+                        <FormDescription>
+                          Enable if this exam should be graded
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="required"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <div className="space-y-0.5">
+                        <FormLabel>Required Exam</FormLabel>
+                        <FormDescription>
+                          Enable if this exam is mandatory
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {/* <div className="flex justify-end">
+                  <Button 
+                    type="button" 
+                    onClick={async () => {
+                      // Validate exam details
+                      const isValid = await form.trigger(["name", "description"]);
+                      if (isValid) {
+                        // Disable exam details fields
+                        form.getValues();
+                        // Show questions section
+                        document.getElementById("questions-section")?.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
+                  >
+                    Confirm Details
+                  </Button>
+                </div> */}
               </CardContent>
             </Card>
 
-            <Card>
+            <Card id="questions-section">
               <CardHeader>
                 <CardTitle>Questions</CardTitle>
               </CardHeader>
@@ -205,19 +267,20 @@ const CreateExam = () => {
                       min="1"
                       value={currentPoints}
                       onChange={(e) => setCurrentPoints(parseInt(e.target.value))}
+                      // disabled={!form.watch("graded")}
                     />
                   </div>
 
                   <div className="space-y-2">
                     <FormLabel>Choices</FormLabel>
-                    
+
                     {choices.map((choice) => (
                       <div key={choice.id} className="flex items-center space-x-2">
                         <Input
                           value={choice.text}
                           onChange={(e) => {
                             setChoices(
-                              choices.map(c => 
+                              choices.map(c =>
                                 c.id === choice.id ? { ...c, text: e.target.value } : c
                               )
                             );
@@ -283,14 +346,14 @@ const CreateExam = () => {
                       <div key={question.id} className="p-4 border rounded-md">
                         <div className="flex justify-between items-start">
                           <div>
-                            <p className="font-medium">Question {index + 1} ({question.points} points)</p>
-                            <p>{question.text}</p>
+                            <p className="font-medium">Question {index + 1}</p>
+                            <p>{question.question}</p>
                           </div>
                           <Button
                             type="button"
                             variant="outline"
                             size="icon"
-                            onClick={() => removeQuestion(question.id)}
+                            onClick={() => removeQuestion(index.toString())}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>
@@ -298,8 +361,8 @@ const CreateExam = () => {
                         <div className="mt-2 space-y-1">
                           <p className="text-sm font-medium">Choices:</p>
                           <ul className="pl-5 list-disc text-sm">
-                            {question.choices.map((choice) => (
-                              <li key={choice.id} className={choice.isCorrect ? "text-green-600 font-medium" : ""}>
+                            {question.choices?.map((choice, choiceIndex) => (
+                              <li key={choiceIndex} className={choice.isCorrect ? "text-green-600 font-medium" : ""}>
                                 {choice.text} {choice.isCorrect && "(Correct)"}
                               </li>
                             ))}
