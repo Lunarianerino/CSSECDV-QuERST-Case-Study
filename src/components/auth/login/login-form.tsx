@@ -18,26 +18,21 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-
-const formSchema = z.object({
-  email: z.string().email({ message: "Invalid email address" }),
-  password: z.string(),
-  rememberMe: z.boolean().default(false),
-});
+import { loginSchema, LoginFormValues } from "@/lib/validations/auth";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
-  async function onSubmit(data: z.infer<typeof formSchema>) {
+  async function onSubmit(data: LoginFormValues) {
     toast.loading("Logging in...", {
       id: "login",
     });

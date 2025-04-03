@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { usePathname } from "next/navigation";
+import { SessionProvider } from "next-auth/react";
 
 function shouldShowSidebar(pathname: string): boolean {
   // Paths where sidebar should NOT appear (auth pages, landing page, etc.)
@@ -23,41 +24,43 @@ export default function ClientLayoutWrapper({
   const showSidebar = shouldShowSidebar(pathname);
   console.log("showSidebar", showSidebar); // Add this line to log the value of showSidebar
   const theme = "dark";
-  if (showSidebar)
-  {
+  if (showSidebar) {
     return (
       <html lang="en" className={theme}>
         <body>
-          <SidebarProvider>
-            <AppSidebar />
-            <main className="w-full">
-              <SidebarTrigger />
-              <QueryProvider>
-                <TooltipProvider>
-                  <Toaster position="bottom-right" />
-                  {children}
-                </TooltipProvider>
-              </QueryProvider>
-            </main>
-          </SidebarProvider>
-  
+          <SessionProvider>
+            <SidebarProvider>
+              <AppSidebar />
+              <main className="w-full">
+                <SidebarTrigger />
+                <QueryProvider>
+                  <TooltipProvider>
+                    <Toaster position="bottom-right" />
+                    {children}
+                  </TooltipProvider>
+                </QueryProvider>
+              </main>
+            </SidebarProvider>
+          </SessionProvider>
         </body>
       </html>
     );
   }
 
   return (
-      <html lang="en" className={theme}>
-        <body>
-            <main className="w-full">
-              <QueryProvider>
-                <TooltipProvider>
-                  <Toaster position="bottom-right" />
-                  {children}
-                </TooltipProvider>
-              </QueryProvider>
-            </main>
-        </body>
-      </html>
+    <html lang="en" className={theme}>
+      <body>
+        <main className="w-full">
+          <SessionProvider>
+            <QueryProvider>
+              <TooltipProvider>
+                <Toaster position="bottom-right" />
+                {children}
+              </TooltipProvider>
+            </QueryProvider>
+          </SessionProvider>
+        </main>
+      </body>
+    </html>
   );
 }
