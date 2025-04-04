@@ -1,3 +1,4 @@
+"use client";
 import {
 	Card,
 	CardContent,
@@ -22,24 +23,24 @@ import {
 import { useState } from "react";
 interface ExamCardProps {
     id: string;
-    title: string;
+    name: string;
     description: string;
-    date?: string;
-    status: string;
-    score?: number;
-    maxScore?: number;
-    results?: string;
+    // date?: string;
+    // status: string;
+    // score?: number;
+    // maxScore?: number;
+    // results?: string;
 }
 
 const ExamCard: React.FC<ExamCardProps> = ({
     id,
-    title,
+    name,
     description,
-    date,
-    status,
-    score,
-    maxScore,
-    results
+    // date,
+    // status,
+    // score,
+    // maxScore,
+    // results
 }) => {
     const [open, setOpen] = useState(false);
 
@@ -60,12 +61,12 @@ const ExamCard: React.FC<ExamCardProps> = ({
         <>
             <Card className="cursor-pointer hover:shadow-lg transition-shadow w-96 h-52 text-center" onClick={handleExamClick}>
                 <CardHeader>
-                    <CardTitle>{title}</CardTitle>
+                    <CardTitle>{name}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <CardDescription>{description}</CardDescription>
                 </CardContent>
-                <CardFooter>
+                {/* <CardFooter>
                     <div className="flex flex-row w-full justify-center gap-12">
                         <div className="flex flex-col justify-between items-center">
                             <div className="text-sm text-gray-500">Results</div>
@@ -90,17 +91,17 @@ const ExamCard: React.FC<ExamCardProps> = ({
                             </div>
                         </div>
                     </div>
-                </CardFooter>
+                </CardFooter> */}
             </Card>
 
             <AlertDialog open={open} onOpenChange={setOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>{title}</AlertDialogTitle>
+                        <AlertDialogTitle>{name}</AlertDialogTitle>
                         <AlertDialogDescription>
                             {description}
                         </AlertDialogDescription>
-                        <div className="mt-4">
+                        {/* <div className="mt-4">
                             <div><strong>Status:</strong> {status}</div>
                             {status === "Finished" && (
                                 <>
@@ -111,10 +112,10 @@ const ExamCard: React.FC<ExamCardProps> = ({
                                 </>
                             )}
                             {date && <div><strong>Date:</strong> {date}</div>}
-                        </div>
+                        </div> */}
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        {status === "Finished" && (
+                        {/* {status === "Finished" && (
                             <>
                                 <AlertDialogAction>View Results</AlertDialogAction>
                                 <AlertDialogAction>Retake Exam</AlertDialogAction>
@@ -124,7 +125,9 @@ const ExamCard: React.FC<ExamCardProps> = ({
                         )}
                         {status === "Not Started" && (
                             <AlertDialogAction onClick={handleTakeExamClick}>Start Exam</AlertDialogAction>
-                        )}
+                        )} */}
+                        {/* TODO: implement the top part back when ready */}
+                        <AlertDialogAction onClick={handleTakeExamClick}>Start Exam</AlertDialogAction>
                         <AlertDialogCancel>Close</AlertDialogCancel>
                     </AlertDialogFooter>
                 </AlertDialogContent>
