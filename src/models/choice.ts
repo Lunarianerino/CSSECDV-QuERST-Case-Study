@@ -5,12 +5,9 @@ export interface IChoice extends Document {
   isCorrect: boolean;
 }
 
-const ChoiceSchema: Schema = new Schema(
+export const ChoiceSchema: Schema = new Schema(
   {
     text: { type: String, required: true },
     isCorrect: { type: Boolean, required: true, default: false }, 
   } 
 )
-
-const Choice = mongoose.models.Choice || mongoose.model<IChoice>("Choice", ChoiceSchema);
-export default Choice;

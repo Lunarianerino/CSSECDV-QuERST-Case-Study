@@ -8,7 +8,7 @@ export interface IAccount extends Document {
   type: string;
 }
 
-const AccountSchema: Schema = new Schema(
+export const AccountSchema: Schema = new Schema(
   {
     name: { type: String, required: false },
     email: { type: String, required: true, unique: true },
@@ -37,6 +37,3 @@ AccountSchema.methods.comparePassword = function (
   const result = compareSync(candidatePassword, this.password);
   cb(null, result);
 };
-
-const Account = mongoose.models?.Account || mongoose.model<IAccount>("Account", AccountSchema);
-export default Account;
