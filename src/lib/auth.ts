@@ -1,5 +1,5 @@
 import { connectToMongoDB } from "@/lib/db";
-import Account from "@/models/account";
+import { Account } from "@/models";
 import type { NextAuthOptions } from "next-auth";
 import credentials from "next-auth/providers/credentials";
 import { compare } from "bcrypt-ts";
