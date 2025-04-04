@@ -1,36 +1,55 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth"; // Import your auth options
+import StudentDashboard from "@/components/dashboard/student/StudentDashboard";
+// Import missing components
+import TeacherDashboard from "@/components/dashboard/teacher/TeacherDashboard";
+import AdminDashboard from "@/components/dashboard/admin/AdminDashboard";
 
-export default function Page() {
-  return (
+export default async function Page() {
+  // get auth user
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    redirect("/");
+  }
+  
+  // TODO: add error messages on redirects (toast context?)
+  const user = session?.user;
+  if (!user) {
+    redirect("/"); 
+  }
+  if (user?.email === null || user?.email === undefined) {
+    redirect("/");
+  }
+
+  // Check if user type exists
+  if (!user.type) {
+    console.error("User type is missing from session");
+    redirect("/");
+  }
+
+  switch(user.type) {
+   case "student":
+    return (
       <main>
-        {/* <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-      <div className="flex items-center gap-2 px-4">
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem className="hidden md:block">
-              <BreadcrumbLink href="#">
-                Building Your Application
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="hidden md:block" />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </div>
-    </header> */}
-
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
-          </div>
-          <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
-        </div>
+        <StudentDashboard />
       </main>
-  )
+    ) 
+   case "teacher":
+    return (
+      <main>
+        <TeacherDashboard />
+      </main>
+    )
+   case "admin":
+    return (
+      <main>
+        <AdminDashboard />
+      </main>
+    )
+    default:
+      redirect("/");
+  }
 }
