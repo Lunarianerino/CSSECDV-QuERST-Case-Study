@@ -1,4 +1,4 @@
-import Account from "@/models/account";
+import { Account } from "@/models";
 import { connectToMongoDB } from "../db";
 
 export interface UserDetails {

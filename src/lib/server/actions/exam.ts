@@ -1,9 +1,7 @@
 "use server";
 import { ExamFormValues } from "@/lib/validations/exams"
 import { connectToMongoDB } from "@/lib/db"
-import Exam from "@/models/exam"
-import Question from "@/models/question"
-import Choice from "@/models/choice"
+import { Exam, Question, Choice } from "@/models"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth";
 export const createExam = async (values: ExamFormValues) => {
