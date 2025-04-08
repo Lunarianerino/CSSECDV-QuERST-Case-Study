@@ -94,6 +94,7 @@ const CreateExam = () => {
       question: currentQuestion,
       type: "choice",
       choices: [...choices],
+      points: currentPoints,
     };
 
     setQuestions([...questions, newQuestion]);
@@ -132,7 +133,7 @@ const CreateExam = () => {
 
     toast.success("Exam created successfully");
     //TODO: ideally, iba dapat to for admins
-    router.push("/exams");
+    router.push("/dashboard");
   };
 
   return (
