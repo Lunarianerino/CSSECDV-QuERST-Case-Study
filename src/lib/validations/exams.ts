@@ -11,6 +11,7 @@ export const examQuestionSchema = z.object({
   question: z.string().min(1, { message: "Question is required" }),
   type: z.string().min(1, { message: "Type is required" }),
   choices: z.array(questionChoiceSchema).optional(),
+  points: z.number().optional(),
 }).refine((data) => {
   if (data.type === "choice") {
     return data.choices && data.choices.length > 0;

@@ -1,17 +1,67 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import QuestionCard from "@/components/exam/QuestionCard";
 import ProgressPanel from "@/components/exam/ProgressPanel";
 import { ExamProvider, useExam } from "@/context/ExamContext";
 import { cn } from "@/lib/utils";
+import { redirect, useParams } from "next/navigation";
+import { getExamByIdAction } from "@/lib/actions/examActions";
 
+//TODO: FIX in the future
 const ExamContent = () => {
-  const { state, setCurrentQuestion, submitExam } = useExam();
+  const { state, setCurrentQuestion, submitExam, setState } = useExam();
   const { questions, currentQuestionIndex, answers } = state;
   const containerRef = useRef<HTMLDivElement>(null);
+  const params = useParams();
+  const examId = params.id as string;
+  
+  // Use useEffect for data fetching
+  useEffect(() => {
+    const fetchExam = async () => {
+      try {
+        // Use the server action instead of direct DB access
+        const examDetails = await getExamByIdAction(examId);
+        console.log(examDetails);
+        
+        if (examDetails?.questions) {
+          // Map API question format to match ExamContext Question format
+          const formattedQuestions = examDetails.questions.map(q => ({
+            id: q.id,
+            text: q.question, // Map 'question' field to 'text' field
+            choices: q.choices?.map(c => ({
+              id: c.id,
+              text: c.text,
+              // We can safely include isCorrect here since it's coming from the server
+              isCorrect: c.isCorrect
+            })) || []
+          }));
 
+          // Update the exam state with the formatted questions
+          setState(prev => ({
+            ...prev,
+            examId: examDetails.id,
+            questions: formattedQuestions,
+            currentQuestionIndex: 0,
+            answers: {},
+            startTime: Date.now(),
+            elapsed: 0,
+            isSaving: false,
+            isFinished: false,
+            loaded: true
+          }));
+
+          console.log(state)
+        }
+      } catch (error) {
+        console.error("Error fetching exam:", error);
+      }
+    };
+    
+    fetchExam();
+  }, [examId, setState]);
+  
+  // Rest of your component remains the same
   useEffect(() => {
     // Smooth scroll to top when changing questions
     if (containerRef.current) {
@@ -19,6 +69,12 @@ const ExamContent = () => {
     }
   }, [currentQuestionIndex]);
 
+  useEffect(() => {
+    if (state.isFinished) {
+      console.log("Exam finished!");
+      redirect("/dashboard"); 
+    }
+  }, [state.isFinished])
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestion(currentQuestionIndex + 1);
@@ -40,6 +96,10 @@ const ExamContent = () => {
   const answeredCount = Object.keys(answers).length;
   const allQuestionsAnswered = answeredCount === questions.length;
 
+  //TODO: Replace with loading context
+  if (state.loaded === false) {
+    return <div>Loading... (Replace with loading context)</div>;
+  }
   return (
     <div className="flex h-screen overflow-hidden">
       <div
@@ -72,11 +132,15 @@ const ExamContent = () => {
 
             {isLastQuestion ? (
               <Button
-                onClick={handleSubmit}
-                className="bg-primary text-primary-foreground transition-all"
-              >
-                Submit Exam
-              </Button>
+              onClick={handleSubmit}
+              className={cn(
+                "bg-primary text-primary-foreground transition-all",
+                allQuestionsAnswered && "animate-pulse-subtle"
+              )}
+              disabled={!allQuestionsAnswered}
+            >
+              Submit Exam
+            </Button>
             ) : (
               <Button
                 onClick={handleNext}

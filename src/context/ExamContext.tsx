@@ -1,3 +1,4 @@
+import { saveExamAnswerAction } from "@/lib/actions/examActions";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -7,25 +8,28 @@ type Choice = {
 };
 
 type Question = {
-  id: number;
+  id: string;
   text: string;
   choices: Choice[];
 };
 
-type ExamState = {
+export type ExamState = {
+  examId: string;
   questions: Question[];
   currentQuestionIndex: number;
-  answers: Record<number, string>;
+  answers: Record<string, string>;
   startTime: number;
   elapsed: number;
   isSaving: boolean;
   isFinished: boolean;
+  loaded: boolean;
 };
 
 type ExamContextType = {
   state: ExamState;
+  setState: React.Dispatch<React.SetStateAction<ExamState>>;
   setCurrentQuestion: (index: number) => void;
-  selectAnswer: (questionId: number, choiceId: string) => void;
+  selectAnswer: (questionId: string, choiceId: string) => void;
   submitExam: () => void;
   resetExam: () => void;
 };
@@ -33,7 +37,7 @@ type ExamContextType = {
 // Sample exam data
 const mockExamData: Question[] = [
   {
-    id: 1,
+    id: "1",
     text: "What is the primary function of the operating system?",
     choices: [
       { id: "a", text: "Managing hardware resources" },
@@ -43,7 +47,7 @@ const mockExamData: Question[] = [
     ],
   },
   {
-    id: 2,
+    id: "2",
     text: "Which data structure uses LIFO (Last In, First Out) principle?",
     choices: [
       { id: "a", text: "Queue" },
@@ -53,7 +57,7 @@ const mockExamData: Question[] = [
     ],
   },
   {
-    id: 3,
+    id: "3",
     text: "What does CSS stand for?",
     choices: [
       { id: "a", text: "Cascading Style Sheets" },
@@ -63,7 +67,7 @@ const mockExamData: Question[] = [
     ],
   },
   {
-    id: 4,
+    id: "4",
     text: "Which protocol is used for secure communication over the internet?",
     choices: [
       { id: "a", text: "HTTP" },
@@ -73,7 +77,7 @@ const mockExamData: Question[] = [
     ],
   },
   {
-    id: 5,
+    id: "5",
     text: "What does API stand for in programming?",
     choices: [
       { id: "a", text: "Application Programming Interface" },
@@ -83,7 +87,7 @@ const mockExamData: Question[] = [
     ],
   },
   {
-    id: 6,
+    id: "6",
     text: "Which language is primarily used for styling web pages?",
     choices: [
       { id: "a", text: "HTML" },
@@ -93,7 +97,7 @@ const mockExamData: Question[] = [
     ],
   },
   {
-    id: 7,
+    id: "7",
     text: "What is the time complexity of binary search?",
     choices: [
       { id: "a", text: "O(1)" },
@@ -105,6 +109,7 @@ const mockExamData: Question[] = [
 ];
 
 const initialState: ExamState = {
+  examId: "1",
   questions: mockExamData,
   currentQuestionIndex: 0,
   answers: {},
@@ -112,12 +117,14 @@ const initialState: ExamState = {
   elapsed: 0,
   isSaving: false,
   isFinished: false,
+  loaded: false,
 };
 
 const ExamContext = createContext<ExamContextType | undefined>(undefined);
 
 export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<ExamState>(initialState);
+  console.log(state)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -139,12 +146,22 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }));
   };
 
-  // Track the last toast time to prevent duplicate toasts
-  const lastToastTimeRef = React.useRef<number>(0);
-  const toastDebounceTime = 800; // ms
-
-  const selectAnswer = (questionId: number, choiceId: string) => {
-    // First update the answers
+  // Add a ref to track pending save operations
+    const pendingSaveRef = React.useRef<Record<string, NodeJS.Timeout>>({});
+    
+    // Track the last toast time to prevent duplicate toasts
+    const lastToastTimeRef = React.useRef<number>(0);
+    const toastDebounceTime = 800; // ms
+    const saveDebounceTime = 500; // ms for database operations
+  
+  const selectAnswer = async (questionId: string, choiceId: string) => {
+    // Check if there are any pending save operations
+    if (state.isSaving || Object.keys(pendingSaveRef.current).length > 0) {
+      // Don't allow new selections while saving
+      return;
+    }
+    
+    // First update the UI immediately for responsiveness
     setState((prev) => {
       const newAnswers = { ...prev.answers, [questionId]: choiceId };
       
@@ -155,25 +172,43 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     });
     
-    // Then handle the toast with debouncing
-    const now = Date.now();
-    if (now - lastToastTimeRef.current > toastDebounceTime) {
-      lastToastTimeRef.current = now;
-      
-      // Show saving toast after a short delay
-      setTimeout(() => {
-        setState((currentState) => ({ ...currentState, isSaving: false }));
-        toast.success("Progress saved", {
-          description: `Question ${questionId} answered`,
-          position: "bottom-right",
-        });
-      }, 600);
-    } else {
-      // Just update the saving state without showing toast
-      setTimeout(() => {
-        setState((currentState) => ({ ...currentState, isSaving: false }));
-      }, 600);
+    // Clear any pending save operation for this question
+    if (pendingSaveRef.current[questionId]) {
+      clearTimeout(pendingSaveRef.current[questionId]);
     }
+    
+    // Debounce the database operation
+    pendingSaveRef.current[questionId] = setTimeout(async () => {
+      try {
+        // TODO: Perform the actual database operation here
+        // TODO: multiple answers support in the future.
+        await saveExamAnswerAction(state.examId, questionId, [choiceId]);
+        console.log("Answer saved to database:", questionId, choiceId);
+        
+        // Show toast only if enough time has passed since last toast
+        const now = Date.now();
+        if (now - lastToastTimeRef.current > toastDebounceTime) {
+          lastToastTimeRef.current = now;
+          toast.success("Progress saved", {
+            description: `Question ${questionId} answered`,
+            position: "bottom-right",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to save answer:", error);
+        toast.error("Failed to save answer", {
+          description: "Please try again",
+        });
+      } finally {
+        // Clear the pending reference and update saving state
+        delete pendingSaveRef.current[questionId];
+        
+        // Only set isSaving to false if there are no more pending saves
+        if (Object.keys(pendingSaveRef.current).length === 0) {
+          setState(prev => ({ ...prev, isSaving: false }));
+        }
+      }
+    }, saveDebounceTime);
   };
 
   // Track if exam has been submitted to prevent duplicate submissions
@@ -182,10 +217,20 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const submitExam = () => {
     // Prevent duplicate submissions
     if (hasSubmittedRef.current) return;
-    
+    // check if all questions are answered
+    //! This might break if multiple choices are implemented in the future
+    if (Object.keys(state.answers).length !== state.questions.length) {
+      toast.error("Please answer all questions before submitting", {
+        description: `You have ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
+      });
+      return;
+    }
     hasSubmittedRef.current = true;
     setState((prev) => ({ ...prev, isFinished: true }));
     
+    //TODO: database operation here
+    //TODO: update user's status and double check if the answers reflected in the database
+    console.log("Exam submitted:", state.answers);
     toast.success("Exam submitted successfully!", {
       description: `Completed with ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
     });
@@ -193,6 +238,7 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetExam = () => {
     // Reset the submission tracking
+    console.log("Resetting exam...");
     hasSubmittedRef.current = false;
     lastToastTimeRef.current = 0;
     
@@ -206,6 +252,7 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <ExamContext.Provider
       value={{
         state,
+        setState,
         setCurrentQuestion,
         selectAnswer,
         submitExam,

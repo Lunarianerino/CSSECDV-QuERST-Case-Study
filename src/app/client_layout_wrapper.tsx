@@ -1,6 +1,5 @@
 "use client"
 import QueryProvider from "@/providers/query-provider";
-import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -9,9 +8,9 @@ import { usePathname } from "next/navigation";
 import { SessionProvider } from "next-auth/react";
 
 function shouldShowSidebar(pathname: string): boolean {
-  // Paths where sidebar should NOT appear (auth pages, landing page, etc.)
+  // Paths where sidebar should appear
   const sidebarPaths = ['/dashboard', '/exams'];
-  // Check if current path starts with any of the no-sidebar paths
+  // Check if current path starts with any of the sidebar paths
   return sidebarPaths.some(path => pathname.startsWith(path));
 }
 
@@ -22,45 +21,34 @@ export default function ClientLayoutWrapper({
 }) {
   const pathname = usePathname();
   const showSidebar = shouldShowSidebar(pathname);
-  console.log("showSidebar", showSidebar); // Add this line to log the value of showSidebar
-  const theme = "dark";
+
   if (showSidebar) {
     return (
-      <html lang="en" className={theme}>
-        <body>
-          <SessionProvider>
-            <SidebarProvider>
-              <AppSidebar />
-              <main className="w-full">
-                <SidebarTrigger />
-                <QueryProvider>
-                  <TooltipProvider>
-                    <Toaster position="bottom-right" />
-                    {children}
-                  </TooltipProvider>
-                </QueryProvider>
-              </main>
-            </SidebarProvider>
-          </SessionProvider>
-        </body>
-      </html>
-    );
-  }
-
-  return (
-    <html lang="en" className={theme}>
-      <body>
-        <main className="w-full">
-          <SessionProvider>
+      <SessionProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <main className="w-full">
+            <SidebarTrigger />
             <QueryProvider>
               <TooltipProvider>
                 <Toaster position="bottom-right" />
                 {children}
               </TooltipProvider>
             </QueryProvider>
-          </SessionProvider>
-        </main>
-      </body>
-    </html>
+          </main>
+        </SidebarProvider>
+      </SessionProvider>
+    );
+  }
+
+  return (
+    <SessionProvider>
+      <QueryProvider>
+        <TooltipProvider>
+          <Toaster position="bottom-right" />
+          {children}
+        </TooltipProvider>
+      </QueryProvider>
+    </SessionProvider>
   );
 }

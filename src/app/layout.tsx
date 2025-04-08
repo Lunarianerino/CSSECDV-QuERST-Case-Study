@@ -18,14 +18,17 @@ export const metadata: Metadata = {
   description: "Find your next tutor today!",
 };
 
-
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
+    <html lang="en" className="dark">
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
+      </body>
+    </html>
   );
 }
 

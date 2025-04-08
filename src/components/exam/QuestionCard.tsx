@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useExam } from "@/context/ExamContext";
 
 interface QuestionCardProps {
-  questionId: number;
+  questionId: string;
   questionNumber: number;
   questionText: string;
   choices: Array<{ id: string; text: string }>;
@@ -19,7 +19,8 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   choices,
   selectedAnswer,
 }) => {
-  const { selectAnswer } = useExam();
+  const { selectAnswer, state } = useExam();
+  const { isSaving } = state;
 
   const handleSelectOption = (choiceId: string) => {
     selectAnswer(questionId, choiceId);
@@ -42,22 +43,26 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               key={choice.id}
               className={cn(
                 "question-option",
-                selectedAnswer === choice.id && "selected"
+                selectedAnswer === choice.id && "selected",
+                isSaving && "opacity-70 cursor-not-allowed"
               )}
-              onClick={() => handleSelectOption(choice.id)}
+              onClick={() => {
+                if (!isSaving) {
+                  handleSelectOption(choice.id);
+                }
+              }}
             >
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary/50 text-primary">
-                {selectedAnswer === choice.id ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <span className="h-3 w-3 rounded-full" />
-                )}
-              </div>
-              <div className="option-content">
-                <div className="font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  {choice.text}
+                <div
+                  className={cn(
+                    "flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                    selectedAnswer === choice.id
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : "border-muted-foreground"
+                  )}
+                >
+                  {selectedAnswer === choice.id && <Check className="h-3 w-3" />}
                 </div>
-              </div>
+                <span className="text-foreground">{choice.text}</span>
             </div>
           ))}
         </div>
