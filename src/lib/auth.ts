@@ -16,7 +16,7 @@ export const authOptions: NextAuthOptions = {
         connectToMongoDB();
         const user = await Account.findOne({
           email: credentials?.email,
-        }).select("+password +type +onboarced");
+        }).select("+password +type +onboarded +_id");
         if (!user) throw new Error("Wrong Email");
         const passwordMatch = await compare(
           credentials!.password.toString(),
@@ -54,6 +54,7 @@ export const authOptions: NextAuthOptions = {
           
           if (latestUser) {
             // Update token with latest user data
+            token.id = latestUser._id.toString();
             token.name = latestUser.name;
             token.type = latestUser.type;
             token.onboarded = latestUser.onboarded;
