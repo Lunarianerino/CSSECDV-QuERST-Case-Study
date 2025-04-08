@@ -4,11 +4,14 @@ import { connectToMongoDB } from "@/lib/db"
 import { Exam, Question, Choice } from "@/models"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth";
+import { AccountType } from "@/models/account";
 export const createExam = async (values: ExamFormValues) => {
   try {
     const session = await getServerSession(authOptions);
     console.log(session);
-    if (!session || session.user?.type !== "admin") {
+
+    //TODO: tutors and admins can create exams
+    if (!session || session.user?.type !== AccountType.ADMIN) {
       return { 
         success: false, 
         error: "Unauthorized", 

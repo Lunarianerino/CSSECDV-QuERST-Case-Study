@@ -9,7 +9,7 @@ import { onboardingSchema, OnboardingFormValues } from '@/lib/validations/auth';
 import { useState } from "react";
 import { useRouter } from 'next/navigation';
 import { useSession } from "next-auth/react";
-
+import { AccountType } from '@/models/account'
 //TODO: Toast Context loading and status
 export default function OnboardingForm() {
   const router = useRouter();
@@ -85,13 +85,13 @@ export default function OnboardingForm() {
                 >
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
-                      <RadioGroupItem value="student" />
+                      <RadioGroupItem value={AccountType.STUDENT} />
                     </FormControl>
                     <FormLabel className="font-normal">Student</FormLabel>
                   </FormItem>
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
-                      <RadioGroupItem value="tutor" />
+                      <RadioGroupItem value={AccountType.TUTOR} />
                     </FormControl>
                     <FormLabel className="font-normal">Tutor</FormLabel>
                   </FormItem>

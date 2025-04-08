@@ -1,6 +1,6 @@
 "use server";
 import { connectToMongoDB } from "@/lib/db";
-import Account from "@/models/account";
+import { Account } from "@/models";
 import { hash, compare } from "bcrypt-ts";
 
 export const register = async (values: any) => {

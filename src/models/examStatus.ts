@@ -1,6 +1,10 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
-
-interface ExamStatus extends Document {
+export enum UserExamStatus {
+  NOT_STARTED = 'not started',
+  STARTED = 'started',
+  FINISHED = 'finished', 
+}
+export interface IExamStatus extends Document {
   examId: Types.ObjectId;
   userId: Types.ObjectId;
   status: string;
@@ -9,13 +13,14 @@ interface ExamStatus extends Document {
   completedAt?: Date;
 }
 
+//TODO: consider changing name of this schema
 export const ExamStatusSchema: Schema = new Schema(
   {
     examId: { type: Schema.Types.ObjectId, required: true, ref: 'Exam' },
     userId: { type: Schema.Types.ObjectId, required: true, ref: 'Account' },
-    status: { type: String, required: true, default: 'incomplete' },
+    status: { type: String, required: true, default: UserExamStatus.NOT_STARTED, enum: UserExamStatus },
     score: { type: Number, required: false },
-    answers: [{ type: Schema.Types.ObjectId, required: false }], 
+    answers: [{ type: Schema.Types.ObjectId, required: false, ref: 'ExamAnswer' }], 
     completedAt: { type: Date, required: false },
   },
   {
