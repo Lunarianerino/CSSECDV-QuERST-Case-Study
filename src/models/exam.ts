@@ -6,6 +6,7 @@ export interface IExam extends Document {
   questions: Types.ObjectId[];
   required: boolean;
   graded: boolean;
+  createdBy: Types.ObjectId;
 }
 
 export const ExamSchema: Schema = new Schema(
@@ -15,6 +16,7 @@ export const ExamSchema: Schema = new Schema(
     questions: [{ type: Schema.Types.ObjectId, ref: "Question" }],
     required: { type: Boolean, required: true, default: false },
     graded: { type: Boolean, required: true, default: false },
+    createdBy: { type: Schema.Types.ObjectId, ref: "Account" },
   },
   {
     timestamps: true,
