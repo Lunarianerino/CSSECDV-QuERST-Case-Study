@@ -6,6 +6,7 @@ import { AccountType } from "@/models/account";
 const protectedRoutes = ['/dashboard', '/exams', '/exam'];
 const authPages = ['/login', '/register'];
 const adminRoutes = ['/admin']
+const indexRoute = ['/'];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -28,12 +29,17 @@ export async function middleware(request: NextRequest) {
   const isOnboarded = token?.onboarded;
   const isAuthPage = authPages.includes(pathname);
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  const isIndexRoute = indexRoute.includes(pathname);
   const isOnboardingPage = pathname === '/onboarding';
   const isAdmin = token?.type === AccountType.ADMIN;
   const isTutor = token?.type === AccountType.TUTOR;
   const isStudent = token?.type === AccountType.STUDENT;
   const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
 
+  // 🏠 Redirect index route to dashboard
+  if (isAuth && isIndexRoute) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
   // 🚫 Redirect non-admin admin users trying to access admin routes
   if (!isAdmin && isAdminRoute) {
     return NextResponse.redirect(new URL('/dashboard', request.url));

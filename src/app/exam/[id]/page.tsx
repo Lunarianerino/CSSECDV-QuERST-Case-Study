@@ -6,7 +6,7 @@ import ProgressPanel from "@/components/exam/ProgressPanel";
 import { ExamProvider, useExam } from "@/context/ExamContext";
 import { cn } from "@/lib/utils";
 import { redirect, useParams } from "next/navigation";
-import { getExamByIdAction } from "@/lib/actions/examActions";
+import { getExamById } from "@/lib/actions/examActions";
 
 //TODO: FIX in the future
 const ExamContent = () => {
@@ -21,7 +21,7 @@ const ExamContent = () => {
     const fetchExam = async () => {
       try {
         // Use the server action instead of direct DB access
-        const examDetails = await getExamByIdAction(examId);
+        const examDetails = await getExamById(examId);
         console.log(examDetails);
         
         if (examDetails?.questions) {

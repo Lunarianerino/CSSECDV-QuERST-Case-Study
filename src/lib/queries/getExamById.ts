@@ -3,6 +3,7 @@ import { connectToMongoDB } from "@/lib/db";
 import getUserDetails from "./getUserDetails";
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth";
+//! this has duplicate name in getExams.ts, oops
 export interface ExamDetails {
   id: string;
   name: string;
