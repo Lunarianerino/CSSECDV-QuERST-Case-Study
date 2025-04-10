@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { connectToMongoDB } from '@/lib/db';
 import { Account } from '@/models';
 import { onboardingSchema } from '@/lib/validations/auth';
+import { autoAssignExams } from '@/lib/actions/examActions';
 //TODO: Replace with a server action
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +51,13 @@ export async function POST(request: NextRequest) {
         { error: 'User not found' },
         { status: 404 }
       );
+    }
+    
+    try {
+      const assignedExams = await autoAssignExams();
+    } catch (error) {
+      console.error('Error in autoAssignExams:', error);
+      // TODO: Handle the error, possibly log it 
     }
     
     return NextResponse.json(

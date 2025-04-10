@@ -1,5 +1,5 @@
 import * as z from "zod"
-
+import { AccountType } from "@/models/account"
 export const registerSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z
@@ -22,7 +22,7 @@ export const loginSchema = z.object({
 
 export const onboardingSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  userType: z.enum(["student", "tutor"], {
+  userType: z.enum([AccountType.STUDENT, AccountType.TUTOR], {
     required_error: "Please select a user type",
   }),
 })
