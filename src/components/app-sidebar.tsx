@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
 import {
   AudioWaveform,
   BookOpen,
@@ -12,6 +13,12 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
+  Users,
+  GraduationCap,
+  FileText,
+  BarChart,
+  Calendar,
+  UserCog,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -22,152 +29,377 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { AccountType } from "@/models/account"
+import { Skeleton } from "./ui/skeleton"
 
-// This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
+// Navigation data based on user type
+const getNavigationData = (userType: string | undefined) => {
+  // Default user data
+  const userData = {
+    name: "User",
+    email: "user@example.com",
+    avatar: "user-avatar-glad.svg",
+  }
+
+  // Admin navigation
+  const adminNavigation = [
     {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
-  navMain: [
-    {
-      title: "Playground",
-      url: "#",
-      icon: SquareTerminal,
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: BarChart,
       isActive: true,
       items: [
         {
-          title: "History",
-          url: "#",
+          title: "Overview",
+          url: "/dashboard",
         },
         {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
+          title: "Analytics",
+          url: "/dashboard/analytics",
         },
       ],
     },
     {
-      title: "Models",
-      url: "#",
-      icon: Bot,
+      title: "Users",
+      url: "/admin/users",
+      icon: Users,
       items: [
         {
-          title: "Genesis",
-          url: "#",
+          title: "All Users",
+          url: "/admin/users",
         },
         {
-          title: "Explorer",
-          url: "#",
+          title: "Tutors",
+          url: "/admin/users/tutors",
         },
         {
-          title: "Quantum",
-          url: "#",
+          title: "Students",
+          url: "/admin/users/students",
         },
       ],
     },
     {
-      title: "Documentation",
-      url: "#",
-      icon: BookOpen,
+      title: "Pairings",
+      url: "/admin/pairings",
+      icon: GalleryVerticalEnd,
+    },
+    {
+      title: "Exams",
+      url: "/exams",
+      icon: FileText,
       items: [
         {
-          title: "Introduction",
-          url: "#",
+          title: "All Exams",
+          url: "/exams",
         },
         {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
+          title: "Create Exam",
+          url: "/exams/create",
         },
       ],
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/admin/settings",
       icon: Settings2,
       items: [
         {
           title: "General",
-          url: "#",
+          url: "/admin/settings",
         },
         {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
+          title: "System",
+          url: "/admin/settings/system",
         },
       ],
     },
-  ],
-  projects: [
+  ]
+
+  // Tutor navigation
+  const tutorNavigation = [
     {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: BarChart,
+      isActive: true,
+      items: [
+        {
+          title: "Overview",
+          url: "/dashboard",
+        },
+        {
+          title: "My Students",
+          url: "/dashboard/students",
+        },
+      ],
     },
     {
-      name: "Sales & Marketing",
-      url: "#",
+      title: "Exams",
+      url: "/exams",
+      icon: FileText,
+      items: [
+        {
+          title: "All Exams",
+          url: "/exams",
+        },
+        {
+          title: "Review",
+          url: "/exams/review",
+        },
+      ],
+    },
+    {
+      title: "Schedule",
+      url: "/schedule",
+      icon: Calendar,
+      items: [
+        {
+          title: "My Schedule",
+          url: "/schedule",
+        },
+        {
+          title: "Availability",
+          url: "/schedule/availability",
+        },
+      ],
+    },
+    {
+      title: "Profile",
+      url: "/profile",
+      icon: UserCog,
+      items: [
+        {
+          title: "Settings",
+          url: "/profile",
+        },
+        {
+          title: "Preferences",
+          url: "/profile/preferences",
+        },
+      ],
+    },
+  ]
+
+  // Student navigation
+  const studentNavigation = [
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: BarChart,
+      isActive: true,
+      items: [
+        {
+          title: "Overview",
+          url: "/dashboard",
+        },
+        {
+          title: "Progress",
+          url: "/dashboard/progress",
+        },
+      ],
+    },
+    {
+      title: "Exams",
+      url: "/exams",
+      icon: FileText,
+      items: [
+        {
+          title: "Available Exams",
+          url: "/exams",
+        },
+        {
+          title: "My Results",
+          url: "/exams/results",
+        },
+      ],
+    },
+    {
+      title: "My Tutor",
+      url: "/tutor",
+      icon: GraduationCap,
+      items: [
+        {
+          title: "View Tutor",
+          url: "/tutor",
+        },
+        {
+          title: "Schedule",
+          url: "/tutor/schedule",
+        },
+      ],
+    },
+    {
+      title: "Profile",
+      url: "/profile",
+      icon: UserCog,
+      items: [
+        {
+          title: "Settings",
+          url: "/profile",
+        },
+        {
+          title: "Preferences",
+          url: "/profile/preferences",
+        },
+      ],
+    },
+  ]
+
+  // Projects based on user type
+  const adminProjects = [
+    {
+      name: "System Administration",
+      url: "/admin/system",
+      icon: Command,
+    },
+    {
+      name: "User Management",
+      url: "/admin/users",
+      icon: Users,
+    },
+    {
+      name: "Analytics",
+      url: "/admin/analytics",
       icon: PieChart,
     },
+  ]
+
+  const tutorProjects = [
     {
-      name: "Travel",
-      url: "#",
+      name: "Teaching Materials",
+      url: "/materials",
+      icon: BookOpen,
+    },
+    {
+      name: "Student Progress",
+      url: "/progress",
+      icon: BarChart,
+    },
+    {
+      name: "Exam Creation",
+      url: "/exams/create",
+      icon: FileText,
+    },
+  ]
+
+  const studentProjects = [
+    {
+      name: "Study Materials",
+      url: "/materials",
+      icon: BookOpen,
+    },
+    {
+      name: "Practice Tests",
+      url: "/practice",
+      icon: FileText,
+    },
+    {
+      name: "Learning Path",
+      url: "/path",
       icon: Map,
     },
-  ],
+  ]
+
+  // Return the appropriate navigation based on user type
+  switch (userType) {
+    case AccountType.ADMIN:
+      return {
+        user: userData,
+        navMain: adminNavigation,
+        projects: adminProjects,
+      }
+    case AccountType.TUTOR:
+      return {
+        user: userData,
+        navMain: tutorNavigation,
+        projects: tutorProjects,
+      }
+    case AccountType.STUDENT:
+      return {
+        user: userData,
+        navMain: studentNavigation,
+        projects: studentProjects,
+      }
+    default:
+      return {
+        user: userData,
+        navMain: studentNavigation, // Default to student view
+        projects: studentProjects,
+      }
+  }
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // Get the current user session
+  const { data: session, status } = useSession()
+  
+  // Only proceed if session is loaded
+  const isLoading = status === "loading"
+  
+  // Get navigation data based on user type
+  const data = getNavigationData(session?.user?.type)
+  
+  // Set user data from session if available
+  const userData = {
+    name: session?.user?.name || "User",
+    email: session?.user?.email || "user@example.com",
+    avatar: "user-avatar-glad.svg", // Default avatar
+  }
+
+  // Return null or loading state while session is loading
+  if (isLoading) {
+    return (
+      <Sidebar collapsible="icon" {...props}>
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <Skeleton className="h-12 w-full rounded-lg" />
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent>
+          {/* Skeleton for main navigation */}
+          <SidebarGroup>
+            <Skeleton className="h-5 w-24 mb-2" />
+            {Array(4).fill(0).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full mb-2 rounded-lg" />
+            ))}
+          </SidebarGroup>
+          
+          {/* Skeleton for projects */}
+          {/* <SidebarGroup className="mt-6">
+            <Skeleton className="h-5 w-24 mb-2" />
+            {Array(3).fill(0).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full mb-2 rounded-lg" />
+            ))}
+          </SidebarGroup> */}
+        </SidebarContent>
+        <SidebarFooter>
+          <Skeleton className="h-5 w-48" />
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+    )
+  }
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
-        😑 All rights reserved.
+        {/* QuERST Matchmaking System © {new Date().getFullYear()} */}
+        😎
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
