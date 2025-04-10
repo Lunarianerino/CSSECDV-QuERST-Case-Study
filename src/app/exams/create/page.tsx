@@ -126,7 +126,7 @@ const CreateExam = () => {
     console.log("Exam data:", examData);
     const results = await createExam(examData);
     if (results.status !== 200) {
-      toast.error("Failed to create exam");
+      toast.error(`Error creating exam: ${results.error}`);
       console.log(results);
       return;
     }
