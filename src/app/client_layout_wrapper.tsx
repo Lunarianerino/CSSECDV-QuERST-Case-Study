@@ -9,7 +9,7 @@ import { SessionProvider } from "next-auth/react";
 
 function shouldShowSidebar(pathname: string): boolean {
   // Paths where sidebar should appear
-  const sidebarPaths = ['/dashboard', '/exams'];
+  const sidebarPaths = ['/dashboard', '/exams', '/admin'];
   // Check if current path starts with any of the sidebar paths
   return sidebarPaths.some(path => pathname.startsWith(path));
 }
