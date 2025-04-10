@@ -75,3 +75,14 @@ export async function getTutorsAndStudentsAggregation() {
     throw new Error("Failed to fetch users");
   }
 }
+
+export async function getUserTypeById(userId: string): Promise<AccountType | null> {
+  try {
+    await connectToMongoDB();
+    const user = await Account.findById(userId);
+    return user ? user.type : null;
+  } catch (error) {
+    console.error("Error fetching user type:", error);
+    throw new Error("Failed to fetch user type"); 
+  }
+}

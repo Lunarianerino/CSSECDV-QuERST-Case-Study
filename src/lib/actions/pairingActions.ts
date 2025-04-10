@@ -22,10 +22,12 @@ export type PairingDetailed = {
   student: {
     id: string;
     name: string;
+    email: string;
   };
   tutor: {
     id: string;
     name: string;
+    email: string;
   };
   status: string;
   reason?: string;
@@ -101,8 +103,8 @@ export async function getAllPairings(): Promise<PairingDetailed[]> {
 
     // Get all pairings with populated student and tutor information
     const pairings = await Match.find({})
-      .populate("studentId", "_id name")
-      .populate("tutorId", "_id name");
+      .populate("studentId", "_id name email")
+      .populate("tutorId", "_id name email");
 
     // Transform the data to a client-friendly format
     return pairings.map((pairing: any) => ({
@@ -110,10 +112,12 @@ export async function getAllPairings(): Promise<PairingDetailed[]> {
       student: {
         id: pairing.studentId._id.toString(),
         name: pairing.studentId.name,
+        email: pairing.studentId.email,
       },
       tutor: {
         id: pairing.tutorId._id.toString(),
         name: pairing.tutorId.name,
+        email: pairing.tutorId.email,
       },
       status: pairing.status,
       reason: pairing.reason,
@@ -141,8 +145,8 @@ export async function getPairingById(pairingId: string): Promise<PairingDetailed
 
     // Get the pairing with populated student and tutor information
     const pairing = await Match.findById(pairingId)
-      .populate("studentId", "_id name")
-      .populate("tutorId", "_id name");
+      .populate("studentId", "_id name email")
+      .populate("tutorId", "_id name email");
 
     if (!pairing) {
       return null;
@@ -154,10 +158,12 @@ export async function getPairingById(pairingId: string): Promise<PairingDetailed
       student: {
         id: pairing.studentId._id.toString(),
         name: pairing.studentId.name,
+        email: pairing.studentId.email,
       },
       tutor: {
         id: pairing.tutorId._id.toString(),
         name: pairing.tutorId.name,
+        email: pairing.tutorId.email,
       },
       status: pairing.status,
       reason: pairing.reason,
@@ -277,8 +283,8 @@ export async function getPairingsByUser({
 
     // Get the pairings with populated student and tutor information
     const pairings = await Match.find(query)
-      .populate("studentId", "_id name")
-      .populate("tutorId", "_id name");
+      .populate("studentId", "_id name email")
+      .populate("tutorId", "_id name email");
 
     // Transform the data to a client-friendly format
     return pairings.map((pairing: any) => ({
@@ -286,10 +292,12 @@ export async function getPairingsByUser({
       student: {
         id: pairing.studentId._id.toString(),
         name: pairing.studentId.name,
+        email: pairing.studentId.email,
       },
       tutor: {
         id: pairing.tutorId._id.toString(),
         name: pairing.tutorId.name,
+        email: pairing.tutorId.email,
       },
       status: pairing.status,
       reason: pairing.reason,
@@ -299,4 +307,44 @@ export async function getPairingsByUser({
     console.error("Error fetching pairings by user:", error);
     throw new Error("Failed to fetch pairings");
   }
+}
+
+/*
+ Get all pairings for the user.
+*/
+export async function getUserPairings(): Promise<PairingDetailed[]> {
+ try {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    throw new Error("Not authorized to view pairings");
+  }
+  await connectToMongoDB();
+
+  const pairings = await Match.find({
+    $or: [
+     { studentId: new Types.ObjectId(session.user.id) },
+     { tutorId: new Types.ObjectId(session.user.id) },
+    ],
+  }).populate("studentId", "_id name email").populate("tutorId", "_id name email");
+
+  return pairings.map((pairing: any) => ({
+    id: pairing._id.toString(),
+    student: {
+     id: pairing.studentId._id.toString(),
+     name: pairing.studentId.name,
+     email: pairing.studentId.email,
+    }, 
+    tutor: {
+     id: pairing.tutorId._id.toString(),
+     name: pairing.tutorId.name, 
+     email: pairing.tutorId.email,
+    },
+    status: pairing.status,
+    reason: pairing.reason,
+    subject: pairing.subject,
+  }))
+ } catch (error) {
+  console.error("Error fetching pairings:", error);
+  throw new Error("Failed to fetch pairings");
+ }
 }

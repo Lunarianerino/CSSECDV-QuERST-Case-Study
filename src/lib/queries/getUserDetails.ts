@@ -19,4 +19,5 @@ const getUserDetails = async (email: string): Promise<UserDetails> => {
     onboarded: user.onboarded,
   };
 }
+
 export default getUserDetails;
