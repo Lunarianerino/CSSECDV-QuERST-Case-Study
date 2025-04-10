@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { AccountType } from "@/models/account";
 import { getSessionUserType } from "@/lib/queries/getSessionUserType";
+import { signOut } from "next-auth/react";
 interface DashboardLayoutProps {
   children: ReactNode;
   title: string;
@@ -24,8 +25,14 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   }, []);
 
   if (!userType) {
-    return null;   
+    return null;
   }
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: false });
+    window.location.href = "/";
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar
@@ -59,11 +66,9 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
             </span>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/">
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Link>
+            <Button onClick={handleSignOut} variant="outline" size="sm">
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
             </Button>
           </div>
         </header>

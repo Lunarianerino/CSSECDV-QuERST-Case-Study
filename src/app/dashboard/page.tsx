@@ -5,8 +5,9 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth"; // Import your auth options
 import StudentDashboard from "@/components/dashboard/student/StudentDashboard";
 // Import missing components
-import TeacherDashboard from "@/components/dashboard/teacher/TeacherDashboard";
+import TutorDashboard from "@/components/dashboard/tutor/TutorDashboard";
 import AdminDashboard from "@/components/dashboard/admin/AdminDashboard";
+import DashboardLayout from "@/components/dashboard-layout";
 
 export default async function Page() {
   // get auth user
@@ -34,19 +35,25 @@ export default async function Page() {
    case "student":
     return (
       <main>
-        <StudentDashboard />
+        <DashboardLayout title="Student Dashboard">
+          <StudentDashboard />
+        </DashboardLayout>
       </main>
     ) 
-   case "teacher":
+   case "tutor":
     return (
       <main>
-        <TeacherDashboard />
+        <DashboardLayout title="Tutor Dashboard">
+          <TutorDashboard />
+        </DashboardLayout>
       </main>
     )
    case "admin":
     return (
       <main>
-        <AdminDashboard />
+        <DashboardLayout title="Admin Dashboard">
+          <AdminDashboard />
+        </DashboardLayout>
       </main>
     )
     default:
