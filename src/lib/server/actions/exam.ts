@@ -11,7 +11,7 @@ export const createExam = async (values: ExamFormValues) => {
     console.log(session);
 
     //TODO: tutors and admins can create exams
-    if (!session || session.user?.type !== AccountType.ADMIN) {
+    if (!session || session.user?.type === AccountType.STUDENT || session.user?.type === AccountType.UNKNOWN) {
       return { 
         success: false, 
         error: "Unauthorized", 

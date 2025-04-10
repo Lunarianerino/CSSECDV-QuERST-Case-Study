@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import getUserDetails from "../queries/getUserDetails";
 import { AccountType } from "@/models/account";
+import { getUserTypeById } from "./userActions";
 /*
   TODO: Add GetExams for ExamsList where admins get all exams and tutors get only exams that they created. Alongside, each exam should return a list of user ids that have been assigned to do the exam.
   TODO: Add GetAssignedUsers for admins and tutors to get a list of users that have been assigned to do the exam.
@@ -203,7 +204,7 @@ export async function assignExamToUserAction(
 
     // get session role and userId role
     const sessionType = session.user.type;
-    const asigneeType = (await getUserDetails(asigneeId)).type;
+    const asigneeType = await getUserTypeById(asigneeId);
 
     if (!(sessionType === AccountType.ADMIN)) {
       if (
@@ -305,41 +306,97 @@ export async function getExams(): Promise<ExamListItem[]> {
   TODO: add a filter that would only return users that are currently paired with the tutor.
 */
 export async function getAssignedUsers(examId: string) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    throw new Error("Not authenticated");
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      throw new Error("Not authenticated");
+    }
+    const exam = await Exam.findById(examId);
+  
+    if (!exam) {
+      throw new Error("Exam not found");
+    }
+  
+    // if not creator but not admin, throw error; admins are able to view all
+    if (
+      exam.createdBy !== session.user.id &&
+      session.user.type !== AccountType.ADMIN
+    ) {
+      throw new Error("You are not authorized to assign users to this exam");
+    }
+  
+    const assignedUsers = await ExamStatus.find({ examId: examId });
+  
+    return assignedUsers;
+  } catch (error) {
+    console.error("Error fetching assigned users:", error);
+    throw new Error("Failed to fetch assigned users"); 
   }
-  const exam = await Exam.findById(examId);
 
-  if (!exam) {
-    throw new Error("Exam not found");
-  }
-
-  // if not creator but not admin, throw error; admins are able to view all
-  if (
-    exam.createdBy !== session.user.id &&
-    session.user.type !== AccountType.ADMIN
-  ) {
-    throw new Error("You are not authorized to assign users to this exam");
-  }
-
-  const assignedUsers = await ExamStatus.find({ examId: examId });
-
-  return assignedUsers;
 }
 
 export async function getAssignedExams() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    throw new Error("Not authenticated");
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      throw new Error("Not authenticated");
+    }
+  
+    //? does this work?
+    const exams = await ExamStatus.find({ userId: session.user.id }).populate({
+      path: "examId",
+      model: "Exam",
+    });
+  
+    // combine the two arrays
+    console.log(exams);
+    return exams;
+  } catch (error) {
+    console.error("Error fetching assigned exams:", error);
+    throw new Error("Failed to fetch assigned exams");
   }
 
-  //? does this work?
-  const exams = await ExamStatus.find({ userId: session.user.id }).populate({
-    path: "examId",
-    model: "Exam",
-  });
+}
 
-  console.log(exams);
-  return exams;
+export async function autoAssignExams() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      throw new Error("Not authenticated");
+    }
+  
+    const userType = await getUserTypeById(session.user.id);
+    let filter = {};
+  
+    if (userType === AccountType.STUDENT) {
+      filter = { forStudents: true };
+    } else if (userType === AccountType.TUTOR) {
+      filter = { forTutors: true };
+    }
+  
+    const exams = await Exam.find(filter);
+  
+    for (const exam of exams) {
+      const existingUserExam = await ExamStatus.findOne({
+        userId: session.user.id,
+        examId: exam._id,
+      });
+  
+      if (existingUserExam) {
+        continue;
+      }
+      await ExamStatus.create({
+        userId: session.user.id,
+        examId: exam._id,
+      });
+    }
+  
+    return {
+      success: true,
+      message: "Exams assigned successfully.", 
+    };    
+  } catch (error) {
+    console.error("Error auto-assigning exams:", error);
+    throw new Error("Failed to auto-assign exams"); 
+  }
 }

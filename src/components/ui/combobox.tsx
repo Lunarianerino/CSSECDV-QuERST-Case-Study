@@ -51,7 +51,7 @@ export const Combobox: NextComponentType<{}, {}, ComboboxProps> = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[200px] justify-between"
+          className="w-full justify-between"
         >
           <span className="truncate flex-1">
             {value
@@ -61,7 +61,7 @@ export const Combobox: NextComponentType<{}, {}, ComboboxProps> = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0 z-[9999]">
+      <PopoverContent className="w-full p-0 z-[9999]">
         <Command>
           <CommandInput placeholder="Search option..." />
           <CommandEmpty>No option found.</CommandEmpty>

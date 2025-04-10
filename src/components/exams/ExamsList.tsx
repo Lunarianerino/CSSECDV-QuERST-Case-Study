@@ -59,16 +59,8 @@ const ExamsList = () => {
                   <DialogDescription>
                     Assign this exam to a user
                   </DialogDescription>
-                  <UsersModal />
+                  <UsersModal examId={exam.id} />
                   <DialogFooter className="sm:justify-start">
-                    <Button>
-                      Save
-                    </Button>
-                    <DialogClose asChild>
-                      <Button type="button" variant="secondary">
-                        Close
-                      </Button>
-                    </DialogClose>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
