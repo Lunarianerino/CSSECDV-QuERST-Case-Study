@@ -264,17 +264,17 @@ export async function assignExamToUserAction(
       throw new Error("Exam not found");
     }
 
-    const existingUserExam = await ExamStatus.findOne({
-      userId: asigneeId,
-      examId: examId,
-    });
+    // const existingUserExam = await ExamStatus.findOne({
+    //   userId: asigneeId,
+    //   examId: examId,
+    // });
 
-    if (existingUserExam) {
-      return {
-        success: false,
-        message: "Exam already assigned to user.",
-      };
-    }
+    // if (existingUserExam) {
+    //   return {
+    //     success: false,
+    //     message: "Exam already assigned to user.",
+    //   };
+    // }
 
     await ExamStatus.create({
       userId: asigneeId,

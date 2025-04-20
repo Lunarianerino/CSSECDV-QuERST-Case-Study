@@ -20,13 +20,13 @@ const DayScheduleSchema = new Schema({
 }, { _id: false });5
 
 const WeeklyScheduleSchema = new Schema({
+  sunday: { type: DayScheduleSchema, required: true, default: () => ({ intervals: [] }) },
   monday: { type: DayScheduleSchema, required: true, default: () => ({ intervals: [] }) },
   tuesday: { type: DayScheduleSchema, required: true, default: () => ({ intervals: [] }) },
   wednesday: { type: DayScheduleSchema, required: true, default: () => ({ intervals: [] }) },
   thursday: { type: DayScheduleSchema, required: true, default: () => ({ intervals: [] }) },
   friday: { type: DayScheduleSchema, required: true, default: () => ({ intervals: [] }) },
   saturday: { type: DayScheduleSchema, required: true, default: () => ({ intervals: [] }) },
-  sunday: { type: DayScheduleSchema, required: true, default: () => ({ intervals: [] }) }
 }, { _id: false });
 
 export const ScheduleSchema: Schema = new Schema({

@@ -14,13 +14,13 @@ export interface DaySchedule {
 }
 
 export interface WeeklySchedule {
+  sunday: DaySchedule;
   monday: DaySchedule;
   tuesday: DaySchedule;
   wednesday: DaySchedule;
   thursday: DaySchedule;
   friday: DaySchedule;
   saturday: DaySchedule;
-  sunday: DaySchedule;
 }
 
 export interface Appointment {
