@@ -1,8 +1,10 @@
-const StatusCircle = ({ status }: { status: string }) => {
+import { UserExamStatus } from "@/models/examStatus";
+
+const StatusCircle = ({ status }: { status: UserExamStatus }) => {
     const circleColor = {
-      "Finished": "bg-green-500",
-      "Started": "bg-yellow-500",
-      "Not Started": "bg-red-500"
+      [UserExamStatus.FINISHED]: "bg-green-500",
+      [UserExamStatus.STARTED]: "bg-yellow-500",
+      [UserExamStatus.NOT_STARTED]: "bg-red-500"
     }[status] || "bg-gray-500";
   
     return (

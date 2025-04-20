@@ -6,11 +6,11 @@ import ProgressPanel from "@/components/exam/ProgressPanel";
 import { ExamProvider, useExam } from "@/context/ExamContext";
 import { cn } from "@/lib/utils";
 import { redirect, useParams } from "next/navigation";
-import { getExamById } from "@/lib/actions/examActions";
+import { getExamById, setStartedExamStatusAction } from "@/lib/actions/examActions";
 
-//TODO: FIX in the future
+//TODO: FIX in the future (add toast)
 const ExamContent = () => {
-  const { state, setCurrentQuestion, submitExam, setState } = useExam();
+  const { state, setCurrentQuestion, submitExam, setState, saveProgress } = useExam();
   const { questions, currentQuestionIndex, answers } = state;
   const containerRef = useRef<HTMLDivElement>(null);
   const params = useParams();
@@ -22,6 +22,10 @@ const ExamContent = () => {
       try {
         // Use the server action instead of direct DB access
         const examDetails = await getExamById(examId);
+        if (!examDetails) {
+          console.error("Exam not found");
+          return; 
+        }
         console.log(examDetails);
         
         if (examDetails?.questions) {
@@ -29,6 +33,7 @@ const ExamContent = () => {
           const formattedQuestions = examDetails.questions.map(q => ({
             id: q.id,
             text: q.question, // Map 'question' field to 'text' field
+            type: q.type || 'choice', // Default to 'choice' if type is not specified
             choices: q.choices?.map(c => ({
               id: c.id,
               text: c.text,
@@ -52,6 +57,13 @@ const ExamContent = () => {
           }));
 
           console.log(state)
+
+        }
+
+        try {
+          await setStartedExamStatusAction(examDetails.id);
+        } catch (error) {
+          console.error("Error setting started exam status:", error); 
         }
       } catch (error) {
         console.error("Error fetching exam:", error);
@@ -75,8 +87,10 @@ const ExamContent = () => {
       redirect("/dashboard"); 
     }
   }, [state.isFinished])
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentQuestionIndex < questions.length - 1) {
+      // Save progress before moving to the next question
+      await saveProgress();
       setCurrentQuestion(currentQuestionIndex + 1);
     }
   };
@@ -87,7 +101,9 @@ const ExamContent = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    // Save progress before submitting the exam
+    await saveProgress();
     submitExam();
   };
 
@@ -118,6 +134,7 @@ const ExamContent = () => {
             questionText={currentQuestion.text}
             choices={currentQuestion.choices}
             selectedAnswer={answers[currentQuestion.id]}
+            questionType={currentQuestion.type || 'choice'}
           />
 
           <div className="flex justify-between mt-8 mb-20">

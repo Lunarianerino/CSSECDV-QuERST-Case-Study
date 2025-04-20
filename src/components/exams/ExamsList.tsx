@@ -59,8 +59,12 @@ const ExamsList = () => {
                   <DialogDescription>
                     Assign this exam to a user
                   </DialogDescription>
-                  <UsersModal examId={exam.id} />
+                  <UsersModal examId={exam.id} onClose={() => {
+                    const dialogClose = document.querySelector('[data-radix-dialog-content] button[aria-label="Close"]') as HTMLButtonElement;
+                    dialogClose?.click();
+                  }} />
                   <DialogFooter className="sm:justify-start">
+                    <DialogClose id="closeDialog"/>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>

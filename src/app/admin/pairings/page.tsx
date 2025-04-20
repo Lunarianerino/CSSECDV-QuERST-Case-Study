@@ -18,7 +18,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import UserSelectionModal from "@/components/pairings/UserSelectionModal";
 import { createPairing, getAllPairings, updatePairingStatus, deletePairing, PairingDetailed } from "@/lib/actions/pairingActions";
+import { savePairedScheduleAction } from "@/lib/actions/pairScheduleAction";
 import { toast } from "sonner";
+import CommonAvailableTimes, { SelectedTimeSlot } from "@/components/pairings/CommonAvailableTimes";
 
 
 // Using the types from pairingActions
@@ -65,6 +67,7 @@ const Page = () => {
   const [newPairingSubject, setNewPairingSubject] = useState("");
   const [rejectReason, setRejectReason] = useState("");
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<SelectedTimeSlot[]>([]);
   
   // Fetch all pairings on component mount
   useEffect(() => {
@@ -116,17 +119,71 @@ const Page = () => {
   const handleApprovePairing = async (pairingId: string) => {
     try {
       setIsSubmitting(true);
+      
+      // Check if time slots are selected
+      if (selectedTimeSlots.length === 0) {
+        toast.error("Please select at least one available time slot");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Create a formatted string of selected time slots for the reason field
+      const timeSlotDetails = selectedTimeSlots.map(slot => {
+        const day = slot.day.charAt(0).toUpperCase() + slot.day.slice(1);
+        return `${day} ${slot.start}-${slot.end}`;
+      }).join(', ');
+      
+      // First update the pairing status
       const result = await updatePairingStatus({
         pairingId,
-        status: MatchStatus.ACCEPTED
+        status: MatchStatus.ACCEPTED,
+        reason: `Assigned times: ${timeSlotDetails}`
       });
       
-      if (result) {
+      if (result && selectedPairing) {
+        // Group selected time slots by day
+        const timeSlotsByDay: Record<string, Array<{ start: string; end: string }>> = {};
+        
+        // Organize time slots by day
+        selectedTimeSlots.forEach(slot => {
+          if (!timeSlotsByDay[slot.day]) {
+            timeSlotsByDay[slot.day] = [];
+          }
+          timeSlotsByDay[slot.day].push({
+            start: slot.start,
+            end: slot.end
+          });
+        });
+        
+        // Save each day's schedule to the database
+        const schedulePromises = Object.entries(timeSlotsByDay).map(async ([day, intervals]) => {
+          // Call the server action to save the schedule
+          return savePairedScheduleAction(
+            selectedPairing.student.id,
+            selectedPairing.tutor.id,
+            day,
+            intervals
+          );
+        });
+        
+        // Wait for all schedule saves to complete
+        const scheduleResults = await Promise.all(schedulePromises);
+        
+        // Check if any schedule save failed
+        const failedSchedules = scheduleResults.filter(result => !result.success);
+        if (failedSchedules.length > 0) {
+          console.error("Some schedules failed to save:", failedSchedules);
+          toast.warning("Pairing approved, but some schedules could not be saved");
+        } else {
+          toast.success("Pairing approved successfully with assigned time slots");
+        }
+        
         // Refresh the pairings list
         const updatedPairings = await getAllPairings();
         setPairings(updatedPairings);
         
-        toast.success("Pairing approved successfully");
+        // Reset selected time slots
+        setSelectedTimeSlots([]);
         
         // Close the details dialog
         setIsDetailsOpen(false);
@@ -407,39 +464,26 @@ const Page = () => {
                 </div>
               </div>
               
-              {/* {isPendingPairing(selectedPairing) && (
-                <div>
-                  <h3 className="font-medium text-sm">Request Date</h3>
-                  <p>{selectedPairing.requestDate}</p>
+              {isPendingPairing(selectedPairing) && (
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="font-medium text-sm mb-2">Available Times</h3>
+                  <CommonAvailableTimes
+                    studentId={selectedPairing.student.id}
+                    tutorId={selectedPairing.tutor.id}
+                    onSelectTimes={setSelectedTimeSlots}
+                  />
                 </div>
               )}
               
-              {(isActivePairing(selectedPairing) || isIssuePairing(selectedPairing)) && (
+              {isActivePairing(selectedPairing) && selectedPairing.reason && (
                 <div>
-                  <h3 className="font-medium text-sm">Start Date</h3>
-                  <p>{selectedPairing.startDate}</p>
+                  <h3 className="font-medium text-sm">Assigned Times</h3>
+                  <p className="text-sm">{selectedPairing.reason}</p>
                 </div>
               )}
-              
-              {isActivePairing(selectedPairing) && (
-                <>
-                  <div>
-                    <h3 className="font-medium text-sm">Last Session</h3>
-                    <p>{selectedPairing.lastSession}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-sm">Next Session</h3>
-                    <p>{selectedPairing.nextSession}</p>
-                  </div>
-                </>
-              )} */}
               
               {isIssuePairing(selectedPairing) && (
                 <>
-                  {/* <div>
-                    <h3 className="font-medium text-sm">Issue Date</h3>
-                    <p>{selectedPairing.issueDate}</p>
-                  </div> */}
                   <div>
                     <h3 className="font-medium text-sm">Issue Description</h3>
                     <p className="text-red-600">{selectedPairing.reason}</p>

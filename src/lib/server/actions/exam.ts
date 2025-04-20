@@ -27,7 +27,7 @@ export const createExam = async (values: ExamFormValues) => {
         type: question.type,
       });
 
-      if (question.type === "choice") {
+      if (question.type === "choice" || question.type === "multiple_choice") {
         if (!question.choices) {
           return { 
             success: false, 

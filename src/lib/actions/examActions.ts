@@ -8,11 +8,7 @@ import { authOptions } from "@/lib/auth";
 import getUserDetails from "../queries/getUserDetails";
 import { AccountType } from "@/models/account";
 import { getUserTypeById } from "./userActions";
-/*
-  TODO: Add GetExams for ExamsList where admins get all exams and tutors get only exams that they created. Alongside, each exam should return a list of user ids that have been assigned to do the exam.
-  TODO: Add GetAssignedUsers for admins and tutors to get a list of users that have been assigned to do the exam.
-  TODO: Add GetAssignedExams for students and tutors to get the exams that they have been assigned to do.
-*/
+
 export interface ExamDetailsWithAnswers {
   id: string;
   name: string;
@@ -135,6 +131,7 @@ export async function saveExamAnswerAction(
         answers_choice: choiceIDs || [],
         answer_text: answerText || "",
       });
+      console.log("Answer saved");
       return { success: true, message: "Answer saved" };
     }
   } catch (error) {
@@ -187,6 +184,47 @@ export async function setStartedExamStatusAction(examId: string) {
   }
 }
 
+export async function setFinishedExamStatusAction(examId: string) {
+  try {
+    await connectToMongoDB();
+
+    const session = await getServerSession(authOptions); 
+    if (!session) {
+      throw new Error("Not authenticated"); 
+    }
+    const userId = session.user.id;
+    // Validate exam exists
+    const exam = await Exam.findById(examId);
+
+    if (!exam) {
+      throw new Error("Exam not found");
+    }
+
+    const existingUserExam = await ExamStatus.findOne({
+      userId: userId,
+      examId: examId,
+    });
+
+    if (existingUserExam) {
+      existingUserExam.status = UserExamStatus.FINISHED;
+      await existingUserExam.save();  
+    } else {
+      return {
+        success: false,
+        message: "Exam not assigned to user.",
+      };
+    }
+
+    return {
+      success: true,
+      message: "Exam status updated successfully.",
+    };
+
+  } catch (error) {
+    console.error("Error saving exam status:", error);
+    throw new Error("Failed to save exam status");
+  }
+}
 /*
   This function will be called when a higher level user assigns an exam to a user (e.g. admin to teachers and students or teacher to student).
 */

@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { getTutorsAndStudentsAggregation } from "@/lib/actions/userActions";
 import { assignExamToUserAction } from "@/lib/actions/examActions";
+import { updateExamAttributesAction } from "@/lib/actions/updateExamAttributesAction";
+import { getExamAttributesAction } from "@/lib/actions/getExamAttributesAction";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Switch } from "@/components/ui/switch";
@@ -10,6 +12,7 @@ import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { AccountType } from "@/models/account";
 import { getUserPairings } from "@/lib/actions/pairingActions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type User = {
   _id: string;
@@ -19,15 +22,19 @@ type User = {
 
 type UsersModalProps = {
   examId?: string;
+  onClose: () => void;
 };
 
-const UsersModal = ({ examId }: UsersModalProps) => {
+const UsersModal = ({ examId, onClose }: UsersModalProps) => {
   const { data: session } = useSession();
   // const [tutors, setTutors] = useState<User[]>([]);
   // const [students, setStudents] = useState<User[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [autoAssignNewUsers, setAutoAssignNewUsers] = useState(false);
+  const [assignToAllStudents, setAssignToAllStudents] = useState(false);
+  const [assignToAllTutors, setAssignToAllTutors] = useState(false);
+  const [originalForStudents, setOriginalForStudents] = useState(false);
+  const [originalForTutors, setOriginalForTutors] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,9 +43,11 @@ const UsersModal = ({ examId }: UsersModalProps) => {
   const isTutor = session?.user?.type === AccountType.TUTOR;
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
+        
+        // Fetch users based on role
         if (isAdmin) {
           // Admins can assign to any user
           const result = await getTutorsAndStudentsAggregation();
@@ -56,17 +65,29 @@ const UsersModal = ({ examId }: UsersModalProps) => {
         } else {
           throw new Error("Unauthorized");
         }
+        
+        // Fetch exam attributes if examId is provided
+        if (examId && isAdmin) {
+          const examAttributes = await getExamAttributesAction(examId);
+          if (examAttributes.success && examAttributes.data) {
+            setAssignToAllStudents(examAttributes.data.forStudents);
+            setAssignToAllTutors(examAttributes.data.forTutors);
+            setOriginalForStudents(examAttributes.data.forStudents);
+            setOriginalForTutors(examAttributes.data.forTutors);
+          }
+        }
+        
         setError(null);
       } catch (err) {
-        setError("Failed to load users. Please try again.");
-        console.error("Error fetching users:", err);
+        setError("Failed to load data. Please try again.");
+        console.error("Error fetching data:", err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchUsers();
-  }, []);
+    fetchData();
+  }, [examId, isAdmin, isTutor]);
 
   // // Prepare user options for the combobox based on user role
   // const userOptions = (() => {
@@ -98,34 +119,54 @@ const UsersModal = ({ examId }: UsersModalProps) => {
       return;
     }
 
-    if (!selectedUserId) {
-      toast.error("Please select a user");
-      return;
-    }
-
     try {
       setIsSubmitting(true);
-      const result = await assignExamToUserAction(examId, selectedUserId);
       
-      if (result.success) {
-        toast.success("Exam assigned successfully");
-        setSelectedUserId(""); // Reset selection
-      } else {
-        toast.error(result.message || "Failed to assign exam");
+      // If admin is updating group assignment settings
+      if (isAdmin && (assignToAllStudents || assignToAllTutors)) {
+        const result = await updateExamAttributesAction(
+          examId,
+          assignToAllStudents,
+          assignToAllTutors
+        );
+        
+        if (result.success) {
+          toast.success("Exam group assignment settings updated");
+        } else {
+          toast.error(result.message || "Failed to update exam settings");
+        }
+      } 
+      
+      // If a specific user is selected, assign to that user
+      if (selectedUserId) {
+        const result = await assignExamToUserAction(examId, selectedUserId);
+        
+        if (result.success) {
+          toast.success("Exam assigned to user successfully");
+          setSelectedUserId(""); // Reset selection
+        } else {
+          toast.error(result.message || "Failed to assign exam to user");
+        }
+      } else if (!assignToAllStudents && !assignToAllTutors) {
+        // If no user is selected and no group assignment is enabled
+        toast.error("Please select a user or enable group assignment");
       }
     } catch (error) {
       console.error("Error assigning exam:", error);
       toast.error("Failed to assign exam");
     } finally {
       setIsSubmitting(false);
+      onClose?.();
+
     }
   };
 
-  // TODO: Implement auto-assign functionality when the API is available
-  const handleAutoAssignToggle = (checked: boolean) => {
-    setAutoAssignNewUsers(checked);
-    // This would need to call an API to set a flag in the database
-    toast.info(checked ? "Auto-assign enabled" : "Auto-assign disabled");
+  const handleStudentsToggle = (checked: boolean) => {
+    setAssignToAllStudents(checked);
+  };
+
+  const handleTutorsToggle = (checked: boolean) => {
+    setAssignToAllTutors(checked);
   };
 
   return (
@@ -134,7 +175,9 @@ const UsersModal = ({ examId }: UsersModalProps) => {
         <div className="space-y-2">
           <Label>Select User</Label>
           {isLoading ? (
-            <div className="text-center py-2">Loading users...</div>
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
           ) : error ? (
             <div className="text-center py-2 text-red-500">{error}</div>
           ) : (
@@ -147,22 +190,49 @@ const UsersModal = ({ examId }: UsersModalProps) => {
         </div>
 
         {isAdmin && (
-          <div className="flex items-center space-x-2">
-            <Switch 
-              id="auto-assign" 
-              checked={autoAssignNewUsers}
-              onCheckedChange={handleAutoAssignToggle}
-            />
-            <Label htmlFor="auto-assign">Automatically assign to new users</Label>
+          <div className="space-y-2">
+            {isLoading ? (
+              <>
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="h-5 w-5 rounded-full" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Skeleton className="h-5 w-5 rounded-full" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="assign-students" 
+                    checked={assignToAllStudents}
+                    onCheckedChange={handleStudentsToggle}
+                  />
+                  <Label htmlFor="assign-students">Assign to all students</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="assign-tutors" 
+                    checked={assignToAllTutors}
+                    onCheckedChange={handleTutorsToggle}
+                  />
+                  <Label htmlFor="assign-tutors">Assign to all tutors</Label>
+                </div>
+              </>
+            )}
           </div>
         )}
 
         <Button 
           onClick={handleAssignExam} 
-          disabled={!selectedUserId || isSubmitting || isLoading}
+          disabled={isLoading || isSubmitting}
           className="w-full"
         >
-          {isSubmitting ? "Assigning..." : "Assign Exam"}
+          {isLoading ? (
+            <Skeleton className="h-5 w-20 mx-auto bg-primary-foreground/30" />
+          ) : isSubmitting ? "Assigning..." : "Assign Exam"}
         </Button>
       </div>
     </div>

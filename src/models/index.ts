@@ -6,6 +6,7 @@ import { ExamAnswersSchema, IExamAnswers } from "./examAnswers";
 import { ExamStatusSchema } from "./examStatus";
 import { MatchSchema, IMatch } from "./match";
 import { QuestionSchema, IQuestion } from "./question";
+import { ScheduleSchema, ISchedule } from "./schedule";
 
 // Initialize all models in one place to prevent duplicate model errors
 export const Account = mongoose.models?.Account || mongoose.model<IAccount>("Account", AccountSchema);
@@ -15,7 +16,7 @@ export const ExamAnswers = mongoose.models?.ExamAnswers || mongoose.model<IExamA
 export const ExamStatus = mongoose.models?.ExamStatus || mongoose.model("ExamStatus", ExamStatusSchema);
 export const Match = mongoose.models?.Match || mongoose.model<IMatch>("Match", MatchSchema);
 export const Question = mongoose.models?.Question || mongoose.model<IQuestion>("Question", QuestionSchema);
-
+export const Schedule = mongoose.models?.Schedule || mongoose.model<ISchedule>("Schedule", ScheduleSchema);
 // Export all models
 export default {
   Account,
@@ -24,5 +25,6 @@ export default {
   ExamAnswers,
   ExamStatus,
   Match,
-  Question
+  Question,
+  Schedule
 };

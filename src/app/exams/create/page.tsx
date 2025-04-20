@@ -47,6 +47,9 @@ const CreateExam = () => {
     },
   });
 
+  // State for question type
+  const [questionType, setQuestionType] = useState<"choice" | "multiple_choice" | "text">("choice");
+
   // Handler for adding a new choice
   const addChoice = () => {
     if (!currentChoice.trim()) return;
@@ -68,32 +71,51 @@ const CreateExam = () => {
 
   // Handler for toggling correct answer
   const toggleCorrect = (id: string) => {
-    setChoices(
-      choices.map(choice =>
-        choice.id === id
-          ? { ...choice, isCorrect: !choice.isCorrect }
-          : choice
-      )
-    );
+    if (questionType === "choice") {
+      // For single choice questions, only one answer can be correct
+      setChoices(
+        choices.map(choice =>
+          choice.id === id
+            ? { ...choice, isCorrect: true }
+            : { ...choice, isCorrect: false }
+        )
+      );
+    } else {
+      // For multiple choice questions, multiple answers can be correct
+      setChoices(
+        choices.map(choice =>
+          choice.id === id
+            ? { ...choice, isCorrect: !choice.isCorrect }
+            : choice
+        )
+      );
+    }
   };
 
   // Handler for adding a question
   const addQuestion = () => {
-    if (!currentQuestion.trim() || choices.length < 2) {
-      toast.error("A question must have at least 2 choices");
+    if (!currentQuestion.trim()) {
+      toast.error("Question text is required");
       return;
     }
 
-    if (!choices.some(choice => choice.isCorrect)) {
-      toast.error("You must mark at least one correct answer");
-      return;
+    if (questionType === "choice" || questionType === "multiple_choice") {
+      if (choices.length < 2) {
+        toast.error("A question must have at least 2 choices");
+        return;
+      }
+
+      if (!choices.some(choice => choice.isCorrect)) {
+        toast.error("You must mark at least one correct answer");
+        return;
+      }
     }
 
     const newQuestion: ExamQuestionFormValues = {
       id: crypto.randomUUID(), // Generate a unique ID
       question: currentQuestion,
-      type: "choice",
-      choices: [...choices],
+      type: questionType,
+      choices: questionType !== "text" ? [...choices] : undefined,
       points: currentPoints,
     };
 
@@ -261,6 +283,29 @@ const CreateExam = () => {
                   </div>
 
                   <div>
+                    <FormLabel htmlFor="questionType">Question Type</FormLabel>
+                    <Select
+                      value={questionType}
+                      onValueChange={(value: "choice" | "multiple_choice" | "text") => {
+                        setQuestionType(value);
+                        // Clear choices if switching to text question
+                        if (value === "text") {
+                          setChoices([]);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select question type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="choice">Single Choice</SelectItem>
+                        <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
+                        <SelectItem value="text">Text Answer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
                     <FormLabel htmlFor="points">Points</FormLabel>
                     <Input
                       id="points"
@@ -272,62 +317,85 @@ const CreateExam = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <FormLabel>Choices</FormLabel>
+                  {(questionType === "choice" || questionType === "multiple_choice") && (
+                    <div className="space-y-2">
+                      <FormLabel>Choices</FormLabel>
+                      <div className="mb-2 text-sm text-muted-foreground">
+                        {questionType === "choice" 
+                          ? "Select one correct answer" 
+                          : "Select one or more correct answers"}
+                      </div>
 
-                    {choices.map((choice) => (
-                      <div key={choice.id} className="flex items-center space-x-2">
+                      {choices.map((choice) => (
+                        <div key={choice.id} className="flex items-center space-x-2">
+                          <Input
+                            value={choice.text}
+                            onChange={(e) => {
+                              setChoices(
+                                choices.map(c =>
+                                  c.id === choice.id ? { ...c, text: e.target.value } : c
+                                )
+                              );
+                            }}
+                            className="flex-1"
+                          />
+                          <Select
+                            value={choice.isCorrect ? "correct" : "incorrect"}
+                            onValueChange={(value) => toggleCorrect(choice.id)}
+                          >
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue placeholder="Answer" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="correct">Correct</SelectItem>
+                              <SelectItem value="incorrect">Incorrect</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => removeChoice(choice.id)}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+
+                      <div className="flex space-x-2">
                         <Input
-                          value={choice.text}
-                          onChange={(e) => {
-                            setChoices(
-                              choices.map(c =>
-                                c.id === choice.id ? { ...c, text: e.target.value } : c
-                              )
-                            );
-                          }}
+                          value={currentChoice}
+                          onChange={(e) => setCurrentChoice(e.target.value)}
+                          placeholder="Add a choice"
                           className="flex-1"
                         />
-                        <Select
-                          value={choice.isCorrect ? "correct" : "incorrect"}
-                          onValueChange={(value) => toggleCorrect(choice.id)}
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <SelectValue placeholder="Answer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="correct">Correct</SelectItem>
-                            <SelectItem value="incorrect">Incorrect</SelectItem>
-                          </SelectContent>
-                        </Select>
                         <Button
                           type="button"
+                          onClick={addChoice}
                           variant="outline"
-                          size="icon"
-                          onClick={() => removeChoice(choice.id)}
                         >
-                          <Trash className="h-4 w-4" />
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Choice
                         </Button>
                       </div>
-                    ))}
-
-                    <div className="flex space-x-2">
-                      <Input
-                        value={currentChoice}
-                        onChange={(e) => setCurrentChoice(e.target.value)}
-                        placeholder="Add a choice"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        onClick={addChoice}
-                        variant="outline"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Choice
-                      </Button>
                     </div>
-                  </div>
+                  )}
+                  
+                  {questionType === "text" && (
+                    <div className="p-4 border rounded-md bg-secondary/20">
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Students will answer this question with a text response.
+                      </p>
+                      <div className="p-3 border rounded-md bg-background">
+                        <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                        <Textarea 
+                          disabled 
+                          placeholder="Student will type their answer here..."
+                          className="min-h-[60px] bg-background"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <Button
                     type="button"
@@ -360,14 +428,22 @@ const CreateExam = () => {
                           </Button>
                         </div>
                         <div className="mt-2 space-y-1">
-                          <p className="text-sm font-medium">Choices:</p>
-                          <ul className="pl-5 list-disc text-sm">
-                            {question.choices?.map((choice, choiceIndex) => (
-                              <li key={choiceIndex} className={choice.isCorrect ? "text-green-600 font-medium" : ""}>
-                                {choice.text} {choice.isCorrect && "(Correct)"}
-                              </li>
-                            ))}
-                          </ul>
+                          <p className="text-sm font-medium">Type: {question.type === "choice" ? "Single Choice" : question.type === "multiple_choice" ? "Multiple Choice" : "Text Answer"}</p>
+                          {question.choices && question.choices.length > 0 && (
+                            <>
+                              <p className="text-sm font-medium">Choices:</p>
+                              <ul className="pl-5 list-disc text-sm">
+                                {question.choices.map((choice, choiceIndex) => (
+                                  <li key={choiceIndex} className={choice.isCorrect ? "text-green-600 font-medium" : ""}>
+                                    {choice.text} {choice.isCorrect && "(Correct)"}
+                                  </li>
+                                ))}
+                              </ul>
+                            </>
+                          )}
+                          {question.type === "text" && (
+                            <p className="text-sm italic">Students will provide a text answer</p>
+                          )}
                         </div>
                       </div>
                     ))}

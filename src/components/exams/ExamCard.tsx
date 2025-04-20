@@ -21,26 +21,28 @@ import {
   } from "@/components/ui/alert-dialog"
 
 import { useState } from "react";
+import { UserExamStatus } from "@/models/examStatus";
+import { setStartedExamStatusAction } from "@/lib/actions/examActions";
 interface ExamCardProps {
     id: string;
     name: string;
     description: string;
-    // date?: string;
-    // status: string;
-    // score?: number;
-    // maxScore?: number;
-    // results?: string;
+    date?: string;
+    status: UserExamStatus;
+    score?: number;
+    maxScore?: number;
+    results?: string;
 }
 
 const ExamCard: React.FC<ExamCardProps> = ({
     id,
     name,
     description,
-    // date,
-    // status,
-    // score,
-    // maxScore,
-    // results
+    date,
+    status,
+    score,
+    maxScore,
+    results
 }) => {
     const [open, setOpen] = useState(false);
 
@@ -50,8 +52,9 @@ const ExamCard: React.FC<ExamCardProps> = ({
         setOpen(true);
     }
 
-    const handleTakeExamClick = () => {
+    const handleTakeExamClick = async () => {
         // Handle take exam click
+        await setStartedExamStatusAction(id);
         console.log(`Take Exam ${id} clicked`);
         setOpen(false);
         window.location.href = `/exam/${id}`;
@@ -66,11 +69,11 @@ const ExamCard: React.FC<ExamCardProps> = ({
                 <CardContent>
                     <CardDescription>{description}</CardDescription>
                 </CardContent>
-                {/* <CardFooter>
+                <CardFooter>
                     <div className="flex flex-row w-full justify-center gap-12">
                         <div className="flex flex-col justify-between items-center">
                             <div className="text-sm text-gray-500">Results</div>
-                            {status === "Finished" ? (
+                            {status === UserExamStatus.FINISHED ? (
                                 <>
                                     <div className="text-sm font-semibold">{results}</div>
                                     {results !== "Not Graded" && (
@@ -91,7 +94,7 @@ const ExamCard: React.FC<ExamCardProps> = ({
                             </div>
                         </div>
                     </div>
-                </CardFooter> */}
+                </CardFooter>
             </Card>
 
             <AlertDialog open={open} onOpenChange={setOpen}>
@@ -101,9 +104,9 @@ const ExamCard: React.FC<ExamCardProps> = ({
                         <AlertDialogDescription>
                             {description}
                         </AlertDialogDescription>
-                        {/* <div className="mt-4">
+                        <div className="mt-4">
                             <div><strong>Status:</strong> {status}</div>
-                            {status === "Finished" && (
+                            {status === UserExamStatus.FINISHED && (
                                 <>
                                     <div><strong>Results:</strong> {results}</div>
                                     {results !== "Not Graded" && (
@@ -112,22 +115,20 @@ const ExamCard: React.FC<ExamCardProps> = ({
                                 </>
                             )}
                             {date && <div><strong>Date:</strong> {date}</div>}
-                        </div> */}
+                        </div>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        {/* {status === "Finished" && (
+                        {status === UserExamStatus.FINISHED && (
                             <>
                                 <AlertDialogAction>View Results</AlertDialogAction>
                                 <AlertDialogAction>Retake Exam</AlertDialogAction>
                             </>                        )}
-                        {status === "Started" && (
-                            <AlertDialogAction>Continue Exam</AlertDialogAction>
+                        {status === UserExamStatus.STARTED && (
+                            <AlertDialogAction onClick={handleTakeExamClick}>Continue Exam</AlertDialogAction>
                         )}
-                        {status === "Not Started" && (
+                        {status === UserExamStatus.NOT_STARTED && (
                             <AlertDialogAction onClick={handleTakeExamClick}>Start Exam</AlertDialogAction>
-                        )} */}
-                        {/* TODO: implement the top part back when ready */}
-                        <AlertDialogAction onClick={handleTakeExamClick}>Start Exam</AlertDialogAction>
+                        )}
                         <AlertDialogCancel>Close</AlertDialogCancel>
                     </AlertDialogFooter>
                 </AlertDialogContent>

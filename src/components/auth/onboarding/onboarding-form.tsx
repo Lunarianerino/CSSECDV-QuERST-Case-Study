@@ -46,7 +46,7 @@ export default function OnboardingForm() {
       }
       console.log('Onboarding successful');
       // Redirect to dashboard
-      router.push('/dashboard');
+      router.push('/schedule');
     } catch (error) {
       console.error('Onboarding error:', error);
     } finally {

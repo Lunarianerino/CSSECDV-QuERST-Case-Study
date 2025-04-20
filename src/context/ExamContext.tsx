@@ -1,4 +1,4 @@
-import { saveExamAnswerAction } from "@/lib/actions/examActions";
+import { saveExamAnswerAction, setFinishedExamStatusAction } from "@/lib/actions/examActions";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -10,14 +10,15 @@ type Choice = {
 type Question = {
   id: string;
   text: string;
-  choices: Choice[];
+  choices?: Choice[];
+  type?: string;
 };
 
 export type ExamState = {
   examId: string;
   questions: Question[];
   currentQuestionIndex: number;
-  answers: Record<string, string>;
+  answers: Record<string, string | string[]>;
   startTime: number;
   elapsed: number;
   isSaving: boolean;
@@ -30,6 +31,9 @@ type ExamContextType = {
   setState: React.Dispatch<React.SetStateAction<ExamState>>;
   setCurrentQuestion: (index: number) => void;
   selectAnswer: (questionId: string, choiceId: string) => void;
+  selectMultipleAnswers: (questionId: string, choiceIds: string[]) => void;
+  selectTextAnswer: (questionId: string, text: string) => void;
+  saveProgress: () => Promise<void>;
   submitExam: () => void;
   resetExam: () => void;
 };
@@ -154,61 +158,39 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const toastDebounceTime = 800; // ms
     const saveDebounceTime = 500; // ms for database operations
   
-  const selectAnswer = async (questionId: string, choiceId: string) => {
-    // Check if there are any pending save operations
-    if (state.isSaving || Object.keys(pendingSaveRef.current).length > 0) {
-      // Don't allow new selections while saving
-      return;
-    }
-    
-    // First update the UI immediately for responsiveness
+  const selectAnswer = (questionId: string, choiceId: string) => {
+    // Only update the UI state without saving to database
     setState((prev) => {
       const newAnswers = { ...prev.answers, [questionId]: choiceId };
-      
       return {
         ...prev,
         answers: newAnswers,
-        isSaving: true,
       };
     });
-    
-    // Clear any pending save operation for this question
-    if (pendingSaveRef.current[questionId]) {
-      clearTimeout(pendingSaveRef.current[questionId]);
-    }
-    
-    // Debounce the database operation
-    pendingSaveRef.current[questionId] = setTimeout(async () => {
-      try {
-        // TODO: Perform the actual database operation here
-        // TODO: multiple answers support in the future.
-        await saveExamAnswerAction(state.examId, questionId, [choiceId]);
-        console.log("Answer saved to database:", questionId, choiceId);
-        
-        // Show toast only if enough time has passed since last toast
-        const now = Date.now();
-        if (now - lastToastTimeRef.current > toastDebounceTime) {
-          lastToastTimeRef.current = now;
-          toast.success("Progress saved", {
-            description: `Question ${questionId} answered`,
-            position: "bottom-right",
-          });
-        }
-      } catch (error) {
-        console.error("Failed to save answer:", error);
-        toast.error("Failed to save answer", {
-          description: "Please try again",
-        });
-      } finally {
-        // Clear the pending reference and update saving state
-        delete pendingSaveRef.current[questionId];
-        
-        // Only set isSaving to false if there are no more pending saves
-        if (Object.keys(pendingSaveRef.current).length === 0) {
-          setState(prev => ({ ...prev, isSaving: false }));
-        }
-      }
-    }, saveDebounceTime);
+  };
+
+  // Handle multiple choice answers
+  const selectMultipleAnswers = (questionId: string, choiceIds: string[]) => {
+    // Only update the UI state without saving to database
+    setState((prev) => {
+      const newAnswers = { ...prev.answers, [questionId]: choiceIds };
+      return {
+        ...prev,
+        answers: newAnswers,
+      };
+    });
+  };
+
+  // Handle text answers
+  const selectTextAnswer = (questionId: string, text: string) => {
+    // Only update the UI state without saving to database
+    setState((prev) => {
+      const newAnswers = { ...prev.answers, [questionId]: text };
+      return {
+        ...prev,
+        answers: newAnswers,
+      };
+    });
   };
 
   // Track if exam has been submitted to prevent duplicate submissions
@@ -218,7 +200,6 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Prevent duplicate submissions
     if (hasSubmittedRef.current) return;
     // check if all questions are answered
-    //! This might break if multiple choices are implemented in the future
     if (Object.keys(state.answers).length !== state.questions.length) {
       toast.error("Please answer all questions before submitting", {
         description: `You have ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
@@ -227,12 +208,17 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     hasSubmittedRef.current = true;
     setState((prev) => ({ ...prev, isFinished: true }));
-    
-    //TODO: database operation here
-    //TODO: update user's status and double check if the answers reflected in the database
-    console.log("Exam submitted:", state.answers);
-    toast.success("Exam submitted successfully!", {
-      description: `Completed with ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
+      
+    setFinishedExamStatusAction(state.examId).then(() => {
+      console.log("Exam submitted:", state.answers);
+      toast.success("Exam submitted successfully!", {
+        description: `Completed with ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
+      });
+    }).catch((error) => {
+      console.error("Error submitting exam:", error);
+      toast.error("Failed to submit exam", {
+        description: "Please try again",
+      });
     });
   };
 
@@ -248,6 +234,50 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // Save all current answers to the database
+  const saveProgress = async () => {
+    // Set saving state to true
+    setState(prev => ({ ...prev, isSaving: true }));
+    
+    try {
+      // Get all answers that need to be saved
+      const { answers, examId } = state;
+      const answerEntries = Object.entries(answers);
+      
+      // Save each answer to the database
+      for (const [questionId, answer] of answerEntries) {
+        if (Array.isArray(answer)) {
+          // Handle multiple choice answers
+          await saveExamAnswerAction(examId, questionId, answer);
+        } else if (typeof answer === 'string') {
+          // Check if it's a choice ID (single choice) or text answer
+          if (answer.length < 24) { // Assuming MongoDB IDs are 24 chars
+            // It's likely a choice ID
+            await saveExamAnswerAction(examId, questionId, [answer]);
+          } else {
+            // It's likely a text answer
+            await saveExamAnswerAction(examId, questionId, undefined, answer);
+          }
+        }
+      }
+      
+      // Show success toast
+      toast.success("Progress saved", {
+        description: `Saved ${answerEntries.length} answers`,
+        position: "bottom-right",
+      });
+      
+    } catch (error) {
+      console.error("Failed to save progress:", error);
+      toast.error("Failed to save progress", {
+        description: "Please try again",
+      });
+    } finally {
+      // Set saving state back to false
+      setState(prev => ({ ...prev, isSaving: false }));
+    }
+  };
+  
   return (
     <ExamContext.Provider
       value={{
@@ -255,6 +285,9 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setState,
         setCurrentQuestion,
         selectAnswer,
+        selectMultipleAnswers,
+        selectTextAnswer,
+        saveProgress,
         submitExam,
         resetExam,
       }}
