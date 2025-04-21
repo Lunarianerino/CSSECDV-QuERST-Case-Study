@@ -128,7 +128,6 @@ const ExamContext = createContext<ExamContextType | undefined>(undefined);
 
 export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<ExamState>(initialState);
-  console.log(state)
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -241,22 +240,32 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       // Get all answers that need to be saved
-      const { answers, examId } = state;
+      const { answers, examId, questions } = state;
       const answerEntries = Object.entries(answers);
       
       // Save each answer to the database
       for (const [questionId, answer] of answerEntries) {
-        if (Array.isArray(answer)) {
-          // Handle multiple choice answers
-          await saveExamAnswerAction(examId, questionId, answer);
-        } else if (typeof answer === 'string') {
-          // Check if it's a choice ID (single choice) or text answer
-          if (answer.length < 24) { // Assuming MongoDB IDs are 24 chars
-            // It's likely a choice ID
-            await saveExamAnswerAction(examId, questionId, [answer]);
-          } else {
-            // It's likely a text answer
+        // Find the question to determine its type
+        const question = questions.find(q => q.id === questionId);
+        const questionType = question?.type || 'choice';
+        
+        if (questionType === 'text') {
+          // For text questions, save as text answer
+          if (typeof answer === 'string') {
             await saveExamAnswerAction(examId, questionId, undefined, answer);
+          }
+        } else if (questionType === 'multiple_choice') {
+          // For multiple choice questions, save as array of choice IDs
+          if (Array.isArray(answer)) {
+            await saveExamAnswerAction(examId, questionId, answer);
+          }
+        } else {
+          // Default case: single choice question
+          if (typeof answer === 'string') {
+            await saveExamAnswerAction(examId, questionId, [answer]);
+          } else if (Array.isArray(answer)) {
+            // Handle case where answer might be stored as array even for single choice
+            await saveExamAnswerAction(examId, questionId, answer);
           }
         }
       }

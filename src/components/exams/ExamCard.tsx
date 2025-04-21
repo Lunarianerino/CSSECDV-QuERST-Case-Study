@@ -32,6 +32,7 @@ interface ExamCardProps {
     score?: number;
     maxScore?: number;
     results?: string;
+    attemptNumber?: number;
 }
 
 const ExamCard: React.FC<ExamCardProps> = ({
@@ -42,7 +43,8 @@ const ExamCard: React.FC<ExamCardProps> = ({
     status,
     score,
     maxScore,
-    results
+    results,
+    attemptNumber
 }) => {
     const [open, setOpen] = useState(false);
 
@@ -54,10 +56,14 @@ const ExamCard: React.FC<ExamCardProps> = ({
 
     const handleTakeExamClick = async () => {
         // Handle take exam click
-        await setStartedExamStatusAction(id);
-        console.log(`Take Exam ${id} clicked`);
-        setOpen(false);
-        window.location.href = `/exam/${id}`;
+        if (id) {
+            // await setStartedExamStatusAction(id, attemptId);
+            // console.log(`Take Exam ${id} attempt ${attemptNumber} clicked`);
+            setOpen(false);
+            window.location.href = `/exam/${id}`;
+        } else {
+            console.error("No attempt ID available");
+        }
     }
 
     return (
@@ -65,6 +71,7 @@ const ExamCard: React.FC<ExamCardProps> = ({
             <Card className="cursor-pointer hover:shadow-lg transition-shadow w-96 h-52 text-center" onClick={handleExamClick}>
                 <CardHeader>
                     <CardTitle>{name}</CardTitle>
+                    {attemptNumber && <div className="text-xs text-gray-500 mt-1">Attempt {attemptNumber}</div>}
                 </CardHeader>
                 <CardContent>
                     <CardDescription>{description}</CardDescription>
@@ -101,6 +108,7 @@ const ExamCard: React.FC<ExamCardProps> = ({
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>{name}</AlertDialogTitle>
+                        {attemptNumber && <div className="text-sm text-gray-500 mb-2">Attempt {attemptNumber}</div>}
                         <AlertDialogDescription>
                             {description}
                         </AlertDialogDescription>

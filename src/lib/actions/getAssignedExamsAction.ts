@@ -16,6 +16,7 @@ export interface AssignedExam {
   maxScore?: number;
   completedAt?: string;
   results?: string;
+  attemptNumber?: number;
 }
 
 export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
@@ -41,6 +42,7 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
         results = "Graded";
       }
 
+      console.log(examStatus._id.toString())
       return {
         id: examStatus._id.toString(),
         examId: examStatus.examId._id.toString(),
@@ -50,7 +52,8 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
         score: examStatus.score,
         maxScore: examStatus.examId.questions?.length || 0, // Assuming 1 point per question
         completedAt: examStatus.completedAt ? examStatus.completedAt.toISOString() : undefined,
-        results: results
+        results: results,
+        attemptNumber: examStatus.attemptNumber ? examStatus.attemptNumber : 1,
       };
     });
   } catch (error) {

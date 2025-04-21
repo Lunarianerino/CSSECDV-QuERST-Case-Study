@@ -91,7 +91,7 @@ export default function TutorDashboard() {
             {assignedExams.map((exam) => (
               <ExamCard
                 key={exam.id}
-                id={exam.examId}
+                id={exam.id}
                 name={exam.name}
                 description={exam.description}
                 status={exam.status as UserExamStatus}
@@ -99,6 +99,7 @@ export default function TutorDashboard() {
                 maxScore={exam.maxScore}
                 results={exam.results}
                 date={exam.completedAt ? new Date(exam.completedAt).toLocaleDateString() : undefined}
+                attemptNumber={exam.attemptNumber}
               />
             ))}
           </div>

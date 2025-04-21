@@ -6,7 +6,7 @@ import ProgressPanel from "@/components/exam/ProgressPanel";
 import { ExamProvider, useExam } from "@/context/ExamContext";
 import { cn } from "@/lib/utils";
 import { redirect, useParams } from "next/navigation";
-import { getExamById, setStartedExamStatusAction } from "@/lib/actions/examActions";
+import { getExamByAttempt, getExamById, setStartedExamStatusAction } from "@/lib/actions/examActions";
 
 //TODO: FIX in the future (add toast)
 const ExamContent = () => {
@@ -14,14 +14,14 @@ const ExamContent = () => {
   const { questions, currentQuestionIndex, answers } = state;
   const containerRef = useRef<HTMLDivElement>(null);
   const params = useParams();
-  const examId = params.id as string;
+  const attemptId = params.id as string;
   
   // Use useEffect for data fetching
   useEffect(() => {
     const fetchExam = async () => {
       try {
-        // Use the server action instead of direct DB access
-        const examDetails = await getExamById(examId);
+        // Use the server action instead of direct DB acess
+        const examDetails = await getExamByAttempt(attemptId);
         if (!examDetails) {
           console.error("Exam not found");
           return; 
@@ -66,12 +66,15 @@ const ExamContent = () => {
           console.error("Error setting started exam status:", error); 
         }
       } catch (error) {
+        //redirect to 404
+        //TODO: dont just redirect to dashboard lol
+        redirect("/dashboard");
         console.error("Error fetching exam:", error);
       }
     };
     
     fetchExam();
-  }, [examId, setState]);
+  }, [attemptId, setState]);
   
   // Rest of your component remains the same
   useEffect(() => {
