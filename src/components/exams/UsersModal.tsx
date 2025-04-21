@@ -54,13 +54,26 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
           setUsers([...result.tutors, ...result.students]);
         } else if (isTutor) {
           const result = await getUserPairings();
-          const formattedResults = result.map((pairing) => {
-            return {
-              _id: pairing.student.id,
-              name: pairing.student.name,
-              email: pairing.student.email,
-            };
-          });
+          const uniqueStudentsMap = new Map<string, { _id: string; name: string; email: string }>();
+          for (const pairing of result) {
+            const studentId = pairing.student.id;
+            if (!uniqueStudentsMap.has(studentId)) {
+              uniqueStudentsMap.set(studentId, {
+                _id: studentId,
+                name: pairing.student.name,
+                email: pairing.student.email,
+              });
+            }
+          }
+          // const formattedResults = result.map((pairing) => {
+          //   return {
+          //     _id: pairing.student.id,
+          //     name: pairing.student.name,
+          //     email: pairing.student.email,
+          //   };
+          // });
+          const formattedResults = Array.from(uniqueStudentsMap.values());
+          console.log(formattedResults);
           setUsers(formattedResults);
         } else {
           throw new Error("Unauthorized");
