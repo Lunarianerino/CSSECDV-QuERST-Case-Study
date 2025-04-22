@@ -11,6 +11,7 @@ export interface IExamStatus extends Document {
   score?: number;
   answers?: Types.ObjectId[];
   completedAt?: Date;
+  attemptNumber?: number;
 }
 
 //TODO: consider changing name of this schema
@@ -22,6 +23,7 @@ export const ExamStatusSchema: Schema = new Schema(
     score: { type: Number, required: false },
     answers: [{ type: Schema.Types.ObjectId, required: false, ref: 'ExamAnswer' }], 
     completedAt: { type: Date, required: false },
+    attemptNumber: { type: Number, required: true, default: 1 },
   },
   {
     timestamps: true,

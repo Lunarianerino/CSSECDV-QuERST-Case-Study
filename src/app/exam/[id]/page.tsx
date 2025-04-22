@@ -48,6 +48,7 @@ const ExamContent = () => {
             examId: examDetails.id,
             questions: formattedQuestions,
             currentQuestionIndex: 0,
+            //TODO: add the answers
             answers: {},
             startTime: Date.now(),
             elapsed: 0,

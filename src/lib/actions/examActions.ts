@@ -59,7 +59,7 @@ export async function getExamByAttempt(attemptId: string): Promise<ExamDetailsWi
     if (!examStatus) {
       throw new Error("Exam attempt not found");
     }
-    console.log(examStatus.examId.questions)
+    console.log(examStatus.answers)
     return {
       id: attemptId,
       name: examStatus.examId.name,
@@ -129,23 +129,24 @@ export async function getExamById(
 
     //! This might not be good since it ignores the fact that an exam might not be assigned to a user
     if (!examStatus) {
-      // No active attempt found
-      return {
-        id: exam._id.toString(),
-        name: exam.name,
-        description: exam.description,
-        questions: exam.questions.map((question: any) => ({
-          id: question._id.toString(),
-          question: question.question,
-          type: question.type,
-          choices: question.choices.map((choice: any) => ({
-            id: choice._id.toString(),
-            text: choice.text,
-            isCorrect: choice.isCorrect,
-          })),
-        })),
-        answers: [],
-      };
+      throw new Error("No active exam attempt found (exam not assigned to user)");
+      // // No active attempt found
+      // return {
+      //   id: exam._id.toString(),
+      //   name: exam.name,
+      //   description: exam.description,
+      //   questions: exam.questions.map((question: any) => ({
+      //     id: question._id.toString(),
+      //     question: question.question,
+      //     type: question.type,
+      //     choices: question.choices.map((choice: any) => ({
+      //       id: choice._id.toString(),
+      //       text: choice.text,
+      //       isCorrect: choice.isCorrect,
+      //     })),
+      //   })),
+      //   answers: [],
+      // };
     }
 
     // Fetch the user's answers for this exam attempt
@@ -310,7 +311,7 @@ export async function setStartedExamStatusAction(attemptId: string) {
   }
 }
 
-export async function setFinishedExamStatusAction(examId: string, attemptId: string) {
+export async function setFinishedExamStatusAction(attemptId: string) {
   try {
     await connectToMongoDB();
 
@@ -319,12 +320,6 @@ export async function setFinishedExamStatusAction(examId: string, attemptId: str
       throw new Error("Not authenticated"); 
     }
     const userId = session.user.id;
-    // Validate exam exists
-    const exam = await Exam.findById(examId);
-
-    if (!exam) {
-      throw new Error("Exam not found");
-    }
 
     const examAttempt = await ExamStatus.findById(attemptId);
 
