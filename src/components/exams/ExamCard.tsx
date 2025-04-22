@@ -126,11 +126,11 @@ const ExamCard: React.FC<ExamCardProps> = ({
                         </div>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        {status === UserExamStatus.FINISHED && (
+                        {/* {status === UserExamStatus.FINISHED && (
                             <>
                                 <AlertDialogAction>View Results</AlertDialogAction>
                                 <AlertDialogAction>Retake Exam</AlertDialogAction>
-                            </>                        )}
+                            </>                        )} */}
                         {status === UserExamStatus.STARTED && (
                             <AlertDialogAction onClick={handleTakeExamClick}>Continue Exam</AlertDialogAction>
                         )}

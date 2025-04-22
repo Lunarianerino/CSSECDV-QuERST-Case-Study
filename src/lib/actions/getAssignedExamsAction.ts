@@ -42,7 +42,7 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
         results = "Graded";
       }
 
-      console.log(examStatus._id.toString())
+      console.log(examStatus)
       return {
         id: examStatus._id.toString(),
         examId: examStatus.examId._id.toString(),
