@@ -26,11 +26,14 @@ export interface ExamDetailsWithAnswers {
       text: string;
       isCorrect: boolean;
     }[];
+    points: number;
   }[];
   answers: {
+    id: string;
     questionId: string;
-    choiceID?: string;
-    answer?: string;
+    answers_choice?: string[];
+    answer_text?: string;
+    score?: number;
   }[];
 }
 
@@ -59,7 +62,7 @@ export async function getExamByAttempt(attemptId: string): Promise<ExamDetailsWi
     if (!examStatus) {
       throw new Error("Exam attempt not found");
     }
-    console.log(examStatus.answers)
+    console.log(examStatus.questions)
     return {
       id: attemptId,
       name: examStatus.examId.name,
@@ -74,12 +77,15 @@ export async function getExamByAttempt(attemptId: string): Promise<ExamDetailsWi
           id: choice._id.toString(),
           text: choice.text,
           isCorrect: choice.isCorrect, 
-        }))
+        })),
+        points: question.points,
       })),
       answers: examStatus.answers.map((answer: any) => ({
+        id: answer._id.toString(),
         questionId: answer.questionId.toString(),
-        choiceID: answer.choiceID? answer.choiceID.toString() : undefined,
-        answer: answer.answer, 
+        answers_choice: answer.answers_choice.map((id: any) => id.toString()),
+        answer_text: answer.answer_text, 
+        score: answer.score,
       })),
     }
   } catch (error) {
@@ -87,104 +93,104 @@ export async function getExamByAttempt(attemptId: string): Promise<ExamDetailsWi
     throw new Error("Failed to fetch exam");
   }
 }
-export async function getExamById(
-  examId: string,
-  attemptId?: string
-): Promise<ExamDetailsWithAnswers | null> {
-  try {
-    await connectToMongoDB();
+// export async function getExamById(
+//   examId: string,
+//   attemptId?: string
+// ): Promise<ExamDetailsWithAnswers | null> {
+//   try {
+//     await connectToMongoDB();
 
-    // Get the current user session
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return null;
-    }
+//     // Get the current user session
+//     const session = await getServerSession(authOptions);
+//     if (!session) {
+//       return null;
+//     }
 
-    const exam = await Exam.findById(examId).populate({
-      path: "questions",
-      populate: {
-        path: "choices",
-        model: "Choice",
-        select: "_id text isCorrect",
-      },
-    });
+//     const exam = await Exam.findById(examId).populate({
+//       path: "questions",
+//       populate: {
+//         path: "choices",
+//         model: "Choice",
+//         select: "_id text isCorrect",
+//       },
+//     });
 
-    if (!exam) {
-      return null;
-    }
+//     if (!exam) {
+//       return null;
+//     }
 
-    // Find the current active exam status for this user
-    let examStatus;
-    if (attemptId) {
-      // If an attempt ID is provided, use that specific attempt
-      examStatus = await ExamStatus.findById(attemptId);
-    } else {
-      // Otherwise, find the latest attempt that's not finished
-      examStatus = await ExamStatus.findOne({
-        userId: session.user.id,
-        examId: examId,
-        status: { $ne: UserExamStatus.FINISHED }
-      }).sort({ attemptNumber: -1 });
-    }
+//     // Find the current active exam status for this user
+//     let examStatus;
+//     if (attemptId) {
+//       // If an attempt ID is provided, use that specific attempt
+//       examStatus = await ExamStatus.findById(attemptId);
+//     } else {
+//       // Otherwise, find the latest attempt that's not finished
+//       examStatus = await ExamStatus.findOne({
+//         userId: session.user.id,
+//         examId: examId,
+//         status: { $ne: UserExamStatus.FINISHED }
+//       }).sort({ attemptNumber: -1 });
+//     }
 
-    //! This might not be good since it ignores the fact that an exam might not be assigned to a user
-    if (!examStatus) {
-      throw new Error("No active exam attempt found (exam not assigned to user)");
-      // // No active attempt found
-      // return {
-      //   id: exam._id.toString(),
-      //   name: exam.name,
-      //   description: exam.description,
-      //   questions: exam.questions.map((question: any) => ({
-      //     id: question._id.toString(),
-      //     question: question.question,
-      //     type: question.type,
-      //     choices: question.choices.map((choice: any) => ({
-      //       id: choice._id.toString(),
-      //       text: choice.text,
-      //       isCorrect: choice.isCorrect,
-      //     })),
-      //   })),
-      //   answers: [],
-      // };
-    }
+//     //! This might not be good since it ignores the fact that an exam might not be assigned to a user
+//     if (!examStatus) {
+//       throw new Error("No active exam attempt found (exam not assigned to user)");
+//       // // No active attempt found
+//       // return {
+//       //   id: exam._id.toString(),
+//       //   name: exam.name,
+//       //   description: exam.description,
+//       //   questions: exam.questions.map((question: any) => ({
+//       //     id: question._id.toString(),
+//       //     question: question.question,
+//       //     type: question.type,
+//       //     choices: question.choices.map((choice: any) => ({
+//       //       id: choice._id.toString(),
+//       //       text: choice.text,
+//       //       isCorrect: choice.isCorrect,
+//       //     })),
+//       //   })),
+//       //   answers: [],
+//       // };
+//     }
 
-    // Fetch the user's answers for this exam attempt
-    const answers = await ExamAnswers.find({
-      userId: session.user.id,
-      examId: examId,
-      _id: { $in: examStatus.answers || [] }
-    });
+//     // Fetch the user's answers for this exam attempt
+//     const answers = await ExamAnswers.find({
+//       userId: session.user.id,
+//       examId: examId,
+//       _id: { $in: examStatus.answers || [] }
+//     });
 
-    // Transform the data to a client-friendly format
-    return {
-      id: exam._id.toString(),
-      name: exam.name,
-      description: exam.description,
-      attemptId: examStatus._id.toString(),
-      attemptNumber: examStatus.attemptNumber,
-      status: examStatus.status,
-      questions: exam.questions.map((question: any) => ({
-        id: question._id.toString(),
-        question: question.question,
-        type: question.type,
-        choices: question.choices.map((choice: any) => ({
-          id: choice._id.toString(),
-          text: choice.text,
-          isCorrect: choice.isCorrect,
-        })),
-      })),
-      answers: answers.map((answer: any) => ({
-        questionId: answer.questionId.toString(),
-        choiceID: answer.choiceID ? answer.choiceID.toString() : undefined,
-        answer: answer.answer,
-      })),
-    };
-  } catch (error) {
-    console.error("Error fetching exam:", error);
-    throw new Error("Failed to fetch exam");
-  }
-}
+//     // Transform the data to a client-friendly format
+//     return {
+//       id: exam._id.toString(),
+//       name: exam.name,
+//       description: exam.description,
+//       attemptId: examStatus._id.toString(),
+//       attemptNumber: examStatus.attemptNumber,
+//       status: examStatus.status,
+//       questions: exam.questions.map((question: any) => ({
+//         id: question._id.toString(),
+//         question: question.question,
+//         type: question.type,
+//         choices: question.choices.map((choice: any) => ({
+//           id: choice._id.toString(),
+//           text: choice.text,
+//           isCorrect: choice.isCorrect,
+//         })),
+//       })),
+//       answers: answers.map((answer: any) => ({
+//         questionId: answer.questionId.toString(),
+//         choiceID: answer.choiceID ? answer.choiceID.toString() : undefined,
+//         answer: answer.answer,
+//       })),
+//     };
+//   } catch (error) {
+//     console.error("Error fetching exam:", error);
+//     throw new Error("Failed to fetch exam");
+//   }
+// }
 
 // Add a function to save exam answers
 export async function saveExamAnswerAction(

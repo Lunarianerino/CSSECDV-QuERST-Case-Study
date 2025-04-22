@@ -4,6 +4,7 @@ export interface IQuestion extends Document {
   question: string;
   type: string;
   choices?: Types.ObjectId[];
+  points: number;
 }
 
 export const QuestionSchema: Schema = new Schema(

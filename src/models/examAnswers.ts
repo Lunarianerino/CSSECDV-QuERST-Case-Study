@@ -5,6 +5,9 @@ export interface IExamAnswers {
   userId: Types.ObjectId;
   answers: Types.ObjectId[];
   attemptId?: Types.ObjectId;
+  answers_choice?: Types.ObjectId[];
+  answer_text?: string;
+  score?: number;
 }
 
 export const ExamAnswersSchema: Schema = new Schema(

@@ -6,7 +6,7 @@ import ProgressPanel from "@/components/exam/ProgressPanel";
 import { ExamProvider, useExam } from "@/context/ExamContext";
 import { cn } from "@/lib/utils";
 import { redirect, useParams } from "next/navigation";
-import { getExamByAttempt, getExamById, setStartedExamStatusAction } from "@/lib/actions/examActions";
+import { getExamByAttempt, setStartedExamStatusAction } from "@/lib/actions/examActions";
 
 //TODO: FIX in the future (add toast)
 const ExamContent = () => {
@@ -42,14 +42,31 @@ const ExamContent = () => {
             })) || []
           }));
 
-          // Update the exam state with the formatted questions
+          // Convert the answers array from the API to the expected Record format
+          const formattedAnswers: Record<string, string | string[]> = {};
+          if (examDetails.answers && examDetails.answers.length > 0) {
+            examDetails.answers.forEach(answer => {
+              if (answer.questionId) {
+                // Handle different answer types based on question type
+                if (answer.answers_choice && answer.answers_choice.length > 0) {
+                  // For choice questions, use the answers_choice array
+                  formattedAnswers[answer.questionId] = 
+                    answer.answers_choice.length === 1 ? answer.answers_choice[0] : answer.answers_choice;
+                } else if (answer.answer_text) {
+                  // For text questions, use the answer_text field
+                  formattedAnswers[answer.questionId] = answer.answer_text;
+                }
+              }
+            });
+          }
+
+          // Update the exam state with the formatted questions and answers
           setState(prev => ({
             ...prev,
             examId: examDetails.id,
             questions: formattedQuestions,
             currentQuestionIndex: 0,
-            //TODO: add the answers
-            answers: {},
+            answers: formattedAnswers,
             startTime: Date.now(),
             elapsed: 0,
             isSaving: false,
@@ -62,7 +79,7 @@ const ExamContent = () => {
         }
 
         try {
-          await setStartedExamStatusAction(examDetails.id);
+          await setStartedExamStatusAction(attemptId);
         } catch (error) {
           console.error("Error setting started exam status:", error); 
         }
