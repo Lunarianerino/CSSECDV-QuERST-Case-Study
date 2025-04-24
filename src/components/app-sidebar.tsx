@@ -135,7 +135,7 @@ const getNavigationData = (userType: string | undefined) => {
         },
         {
           title: "My Students",
-          url: "/dashboard/students",
+          url: "/students",
         },
       ],
     },

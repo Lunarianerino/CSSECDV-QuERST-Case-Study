@@ -1,11 +1,186 @@
 "use server";
 import { connectToMongoDB } from "../db";
 import { MatchStatus } from "@/models/match";
-import { Match } from "@/models";
+import { Match, ExamStatus, Exam, ExamAnswers } from "@/models";
 import mongoose, { Types } from "mongoose";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AccountType } from "@/models/account";
+import { UserExamStatus } from "@/models/examStatus";
+
+export interface StudentWithExams {
+  matchId: string;
+  studentId: string;
+  name: string;
+  email: string;
+  pairingDate: string;
+  exams: {
+    id: string;
+    examId: string;
+    name: string;
+    description: string;
+    status: string;
+    score?: number;
+    maxScore?: number;
+    correctAnswers?: number;
+    incorrectAnswers?: number;
+    skippedAnswers?: number;
+    completedAt?: string;
+    attemptNumber: number;
+  }[];
+}
+
+/**
+ * Get all students paired with the current tutor
+ */
+export async function getPairedStudentsAction(): Promise<StudentWithExams[]> {
+  try {
+    await connectToMongoDB();
+
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      throw new Error("Not authenticated");
+    }
+
+    // Verify user is a tutor
+    if (session.user.type !== AccountType.TUTOR) {
+      throw new Error("Only tutors can access paired students");
+    }
+
+    // Find all active matches for this tutor
+    const matches = await Match.find({
+      tutorId: session.user.id,
+      status: { $in: [MatchStatus.ACCEPTED, MatchStatus.ONGOING] }
+    }).populate({
+      path: "studentId",
+      model: "Account",
+      select: "name email"
+    });
+
+    // For each student, get their exam attempts
+    const studentsWithExams = await Promise.all(matches.map(async (match) => {
+      const matchId = match._id.toString();
+      const student = match.studentId;
+      
+      // Find all exam attempts for this student that were assigned by this tutor
+      const examAttempts = await ExamStatus.find({
+        userId: student._id,
+        assignedBy: session.user.id
+      }).populate({
+        path: "examId",
+        model: "Exam"
+      }).sort({ createdAt: -1 }); // Most recent first
+
+      // Process each exam attempt to calculate performance metrics
+      const exams = await Promise.all(examAttempts.map(async (attempt) => {
+        let correctAnswers = 0;
+        let incorrectAnswers = 0;
+        let skippedAnswers = 0;
+
+        // Only calculate detailed metrics for finished exams
+        if (attempt.status === UserExamStatus.FINISHED) {
+          // Get all answers for this attempt
+          const answers = await ExamAnswers.find({
+            _id: { $in: attempt.answers || [] }
+          });
+
+          // Get all questions for this exam
+          const exam = await Exam.findById(attempt.examId._id).populate({
+            path: "questions",
+            populate: {
+              path: "choices",
+              model: "Choice"
+            }
+          });
+
+          if (exam && exam.questions) {
+            // For each question, check if it was answered correctly
+            exam.questions.forEach(question => {
+              const answer = answers.find(a => a.questionId.toString() === question._id.toString());
+              
+              if (!answer || (!answer.answers_choice?.length && !answer.answer_text)) {
+                // Question was skipped
+                skippedAnswers++;
+              } else if (question.type === "choice") {
+                // Single choice question
+                const selectedId = answer.answers_choice[0];
+                console.log(`${question.choices}`)
+                const selectedChoice = question.choices.find(c => c._id.toString() === selectedId);
+                
+                console.log(`Selected ID: ${selectedId}`);
+                console.log(`Selected Choice: ${selectedChoice}`);
+                if (selectedChoice?.isCorrect) {
+                  correctAnswers++;
+                } else {
+                  incorrectAnswers++;
+                }
+              } else if (question.type === "multiple_choice") {
+                // Multiple choice question - consider partially correct
+                const choiceIds = answer.answers_choice;
+                const correctChoices = question.choices.filter(c => c.isCorrect).map(c => c._id.toString());
+                const selectedCorrect = choiceIds.filter(id => correctChoices.includes(id));
+                
+                if (selectedCorrect.length === correctChoices.length && selectedCorrect.length === choiceIds.length) {
+                  // All correct choices selected and no incorrect ones
+                  correctAnswers++;
+                } else if (selectedCorrect.length > 0) {
+                  // Partially correct
+                  correctAnswers += 0.5;
+                  incorrectAnswers += 0.5;
+                } else {
+                  // All wrong
+                  incorrectAnswers++;
+                }
+              } else {
+                // Text answer - use the score if available
+                if (answer.score) {
+                  if (answer.score > 0) {
+                    correctAnswers++;
+                  } else {
+                    incorrectAnswers++;
+                  }
+                } else {
+                  // Not graded yet
+                  skippedAnswers++;
+                }
+              }
+            });
+          }
+        }
+
+        return {
+          id: attempt._id.toString(),
+          examId: attempt.examId._id.toString(),
+          name: attempt.examId.name,
+          description: attempt.examId.description,
+          status: attempt.status,
+          score: attempt.score,
+          maxScore: attempt.examId.questions?.length || 0,
+          correctAnswers: correctAnswers,
+          incorrectAnswers: incorrectAnswers,
+          skippedAnswers: skippedAnswers,
+          completedAt: attempt.completedAt ? attempt.completedAt.toISOString() : undefined,
+          attemptNumber: attempt.attemptNumber || 1
+        };
+      }));
+
+      console.log(exams);
+      return {
+        matchId: matchId,
+        studentId: student._id.toString(),
+        name: student.name,
+        email: student.email,
+        pairingDate: match.createdAt ? new Date(match.createdAt).toISOString() : new Date().toISOString(),
+        exams: exams
+      };
+    }));
+
+    return studentsWithExams;
+  } catch (error) {
+    console.error("Error fetching paired students:", error);
+    throw new Error("Failed to fetch paired students");
+  }
+}
 
 // Type definitions for our return values
 export type PairingBasic = {

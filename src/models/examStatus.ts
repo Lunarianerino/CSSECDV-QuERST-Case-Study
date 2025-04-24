@@ -12,6 +12,7 @@ export interface IExamStatus extends Document {
   answers?: Types.ObjectId[];
   completedAt?: Date;
   attemptNumber?: number;
+  assignedBy?: Types.ObjectId;
 }
 
 //TODO: consider changing name of this schema
@@ -19,6 +20,7 @@ export const ExamStatusSchema: Schema = new Schema(
   {
     examId: { type: Schema.Types.ObjectId, required: true, ref: 'Exam' },
     userId: { type: Schema.Types.ObjectId, required: true, ref: 'Account' },
+    assignedBy: { type: Schema.Types.ObjectId, required: false, ref: 'Account' },
     status: { type: String, required: true, default: UserExamStatus.NOT_STARTED, enum: UserExamStatus },
     score: { type: Number, required: false },
     answers: [{ type: Schema.Types.ObjectId, required: false, ref: 'ExamAnswer' }], 

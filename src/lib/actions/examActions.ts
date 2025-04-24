@@ -405,10 +405,12 @@ export async function assignExamToUserAction(
     const newAttempt = await ExamStatus.create({
       userId: asigneeId,
       examId: examId,
+      assignedBy: session.user.id,
       status: UserExamStatus.NOT_STARTED,
       attemptNumber: nextAttemptNumber,
     });
 
+    console.log(newAttempt);
     return {
       success: true,
       message: "Exam assigned successfully.",
