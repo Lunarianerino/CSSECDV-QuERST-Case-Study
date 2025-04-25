@@ -32,16 +32,22 @@ interface Option {
 export type ComboboxSchema = Option[];
 
 interface ComboboxProps {
-  schema: Option[];
+  schema?: Option[];
+  options?: Option[];
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
 }
 
 export const Combobox: NextComponentType<{}, {}, ComboboxProps> = ({
   schema,
+  options,
   value,
   onChange,
+  placeholder = "Select option...",
 }) => {
+  // Use options if provided, otherwise use schema
+  const items = options || schema || [];
   const [open, setOpen] = useState(false);
 
   return (
@@ -55,8 +61,8 @@ export const Combobox: NextComponentType<{}, {}, ComboboxProps> = ({
         >
           <span className="truncate flex-1">
             {value
-              ? schema.find((option) => option.value === value)?.label
-              : "Select option..."}
+              ? items.find((option) => option.value === value)?.label
+              : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -67,7 +73,7 @@ export const Combobox: NextComponentType<{}, {}, ComboboxProps> = ({
           <CommandEmpty>No option found.</CommandEmpty>
           <CommandList>
             <CommandGroup>
-              {schema.map((option) => (
+              {items.map((option) => (
                 <CommandItem
                   key={option.value}
                   // Include both name (from label) and email in the searchable value

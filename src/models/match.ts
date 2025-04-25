@@ -30,6 +30,9 @@ export const MatchSchema: Schema = new Schema(
     status: { type: String, required: true, default: MatchStatus.PENDING, enum: MatchStatus }, 
     reason: { type: String, required: false },
     subject: { type: String, required: true },
-  } 
+  },
+  {
+    timestamps: true,
+  }
 )
 

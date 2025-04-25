@@ -7,6 +7,7 @@ import { ExamStatusSchema } from "./examStatus";
 import { MatchSchema, IMatch } from "./match";
 import { QuestionSchema, IQuestion } from "./question";
 import { ScheduleSchema, ISchedule } from "./schedule";
+import { VarkSchema, IVark } from "./vark";
 
 // Initialize all models in one place to prevent duplicate model errors
 export const Account = mongoose.models?.Account || mongoose.model<IAccount>("Account", AccountSchema);
@@ -17,6 +18,7 @@ export const ExamStatus = mongoose.models?.ExamStatus || mongoose.model("ExamSta
 export const Match = mongoose.models?.Match || mongoose.model<IMatch>("Match", MatchSchema);
 export const Question = mongoose.models?.Question || mongoose.model<IQuestion>("Question", QuestionSchema);
 export const Schedule = mongoose.models?.Schedule || mongoose.model<ISchedule>("Schedule", ScheduleSchema);
+export const Vark = mongoose.models?.Vark || mongoose.model<IVark>("Vark", VarkSchema);
 // Export all models
 export default {
   Account,
@@ -26,5 +28,6 @@ export default {
   ExamStatus,
   Match,
   Question,
-  Schedule
+  Schedule,
+  Vark,
 };
