@@ -61,6 +61,7 @@ export const createExam = async (values: ExamFormValues) => {
       required: values.required,
       graded: values.graded,
       createdBy: session.user.id,
+      type: values.type,
     });
 
     const exam_result = await exam.save();

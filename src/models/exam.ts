@@ -1,5 +1,15 @@
 // Exams
 import mongoose, { Schema, Document, Types } from "mongoose";
+
+export enum ExamTypes {
+  SUMMATIVE = "SUMMATIVE",
+  FORMATIVE = "FORMATIVE",
+  SURVEY = "SURVEY",
+  BFI = "BFI",
+  VARK = "VARK",
+  OTHERS = "OTHERS",
+  DOMAIN = "DOMAIN",
+}
 export interface IExam extends Document {
   name: string;
   description: string;
@@ -9,6 +19,7 @@ export interface IExam extends Document {
   createdBy: Types.ObjectId;
   forStudents: boolean;
   forTutors: boolean;
+  type: ExamTypes;
 }
 
 export const ExamSchema: Schema = new Schema(
@@ -21,6 +32,7 @@ export const ExamSchema: Schema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: "Account" },
     forStudents: { type: Boolean, required: true, default: false },
     forTutors: { type: Boolean, required: true, default: false },
+    type: { type: String, enum: ExamTypes, required: true, default: ExamTypes.OTHERS },
   },
   {
     timestamps: true,

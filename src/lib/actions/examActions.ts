@@ -8,7 +8,7 @@ import { authOptions } from "@/lib/auth";
 import getUserDetails from "../queries/getUserDetails";
 import { AccountType } from "@/models/account";
 import { getUserTypeById } from "./userActions";
-
+import { ExamTypes } from "@/models/exam";
 //TODO: rename ExamStatus to Attempt
 export interface ExamDetailsWithAnswers {
   id: string;
@@ -590,5 +590,26 @@ export async function autoAssignExams() {
   } catch (error) {
     console.error("Error auto-assigning exams:", error);
     throw new Error("Failed to auto-assign exams"); 
+  }
+}
+
+export async function getExamTypes(): Promise<ExamTypes[]> {
+  // If admin, return all exam types
+  // If tutor, return only summative and formative
+  // If student, return empty
+
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    throw new Error("Not authenticated");
+  }
+
+  const sessionType = session.user.type;
+
+  if (sessionType === AccountType.ADMIN) {
+    return Object.values(ExamTypes);
+  } else if (sessionType === AccountType.TUTOR) {
+    return [ExamTypes.SUMMATIVE, ExamTypes.FORMATIVE];
+  } else {
+    return [];
   }
 }

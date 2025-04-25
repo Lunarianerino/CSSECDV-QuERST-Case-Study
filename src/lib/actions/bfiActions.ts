@@ -141,7 +141,6 @@ export async function saveBfiMappingsAction(data: BfiSubmissionData) {
         attribute: mapping.attribute,
         isReversed: mapping.isReversed,
       }));
-      console.log(bfiMappings);
       await Bfi.insertMany(bfiMappings);
     }
 

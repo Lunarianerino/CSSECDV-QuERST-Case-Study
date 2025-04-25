@@ -5,7 +5,7 @@ import { Exam, ExamStatus } from "@/models";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { UserExamStatus } from "@/models/examStatus";
-
+import { ExamTypes } from "@/models/exam";
 export interface AssignedExam {
   id: string;
   examId: string;
@@ -17,6 +17,7 @@ export interface AssignedExam {
   completedAt?: string;
   results?: string;
   attemptNumber?: number;
+  type: string;
 }
 
 export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
@@ -33,7 +34,6 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
       path: "examId",
       model: "Exam",
     });
-
     // Transform the data to a client-friendly format
     return assignedExams.map((examStatus: any) => {
       // Determine results status
@@ -41,8 +41,7 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
       if (examStatus.status === UserExamStatus.FINISHED && examStatus.score !== undefined) {
         results = "Graded";
       }
-
-      console.log(examStatus)
+      console.log(examStatus.examId.type)
       return {
         id: examStatus._id.toString(),
         examId: examStatus.examId._id.toString(),
@@ -54,6 +53,7 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
         completedAt: examStatus.completedAt ? examStatus.completedAt.toISOString() : undefined,
         results: results,
         attemptNumber: examStatus.attemptNumber ? examStatus.attemptNumber : 1,
+        type: examStatus.examId.type ? examStatus.examId.type : ExamTypes.OTHERS,
       };
     });
   } catch (error) {

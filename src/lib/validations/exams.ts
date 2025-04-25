@@ -1,5 +1,5 @@
 import * as z from "zod";
-
+import { ExamTypes } from "@/models/exam";
 export const questionChoiceSchema = z.object({
   id: z.string(),
   text: z.string().min(1, { message: "Text is required" }),
@@ -28,6 +28,9 @@ export const examSchema = z.object({
   required: z.boolean().default(false),
   graded: z.boolean().default(false),
   questions: z.array(examQuestionSchema),
+  type: z.string().min(1, { message: "Type is required" }),
+}).refine((data) => {
+  return Object.values(ExamTypes).includes(data.type as ExamTypes);
 })
 
 export type ExamFormValues = z.infer<typeof examSchema>;

@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Trash } from "lucide-react";
+import { Plus, Trash, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { examSchema, examQuestionSchema, questionChoiceSchema, ExamFormValues, ExamQuestionFormValues, QuestionChoiceFormValues } from "@/lib/validations/exams";
 import { createExam } from "@/lib/server/actions/exam";
+import { ExamTypes } from "@/models/exam";
+import { getExamTypes } from "@/lib/actions/examActions";
 import { Switch } from "@/components/ui/switch";
 // Define types for the form
 
@@ -34,7 +36,9 @@ const CreateExam = () => {
   const [currentPoints, setCurrentPoints] = useState<number>(1);
   const [choices, setChoices] = useState<QuestionChoiceFormValues[]>([]);
   const [currentChoice, setCurrentChoice] = useState<string>("");
-
+  const [examTypes, setExamTypes] = useState<ExamTypes[]>();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
   // Configure form
   const form = useForm<ExamFormValues>({
     resolver: zodResolver(examSchema),
@@ -47,6 +51,22 @@ const CreateExam = () => {
     },
   });
 
+  useEffect(() => {
+    const fetchExamTypes = async () => {
+      try {
+        setIsLoading(true);
+        const results = await getExamTypes();
+        setExamTypes(results);
+      } catch (error) {
+        toast.error("Failed to load exam types");
+        console.error("Error fetching exam types:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchExamTypes();
+  }, []);
+  
   // State for question type
   const [questionType, setQuestionType] = useState<"choice" | "multiple_choice" | "text">("choice");
 
@@ -158,6 +178,17 @@ const CreateExam = () => {
     router.push("/dashboard");
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-lg font-medium">Loading exam creation form...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-3xl mx-auto space-y-6">
@@ -244,6 +275,28 @@ const CreateExam = () => {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Exam Type</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select exam type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {examTypes?.map((type) => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
                 {/* <div className="flex justify-end">
                   <Button 
                     type="button" 

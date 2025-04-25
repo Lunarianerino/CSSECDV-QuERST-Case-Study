@@ -140,50 +140,44 @@ const getNavigationData = (userType: string | undefined) => {
       ],
     },
     {
-      title: "Exams",
+      title: "Assessments",
       url: "/exams",
       icon: FileText,
       items: [
         {
-          title: "All Exams",
+          title: "All Assessments",
           url: "/exams",
         },
         {
-          title: "Review",
-          url: "/exams/review",
+          title: "Create Assessment",
+          url: "/exams/create",
         },
+        {
+          title: "Submissions",
+          url: "/exams/grade",
+        }
       ],
     },
     {
       title: "Schedule",
       url: "/schedule",
       icon: Calendar,
-      items: [
-        {
-          title: "My Schedule",
-          url: "/schedule",
-        },
-        {
-          title: "Availability",
-          url: "/schedule/availability",
-        },
-      ],
     },
-    {
-      title: "Profile",
-      url: "/profile",
-      icon: UserCog,
-      items: [
-        {
-          title: "Settings",
-          url: "/profile",
-        },
-        {
-          title: "Preferences",
-          url: "/profile/preferences",
-        },
-      ],
-    },
+    // {
+    //   title: "Profile",
+    //   url: "/profile",
+    //   icon: UserCog,
+    //   items: [
+    //     {
+    //       title: "Settings",
+    //       url: "/profile",
+    //     },
+    //     {
+    //       title: "Preferences",
+    //       url: "/profile/preferences",
+    //     },
+    //   ],
+    // },
   ]
 
   // Student navigation
@@ -193,62 +187,67 @@ const getNavigationData = (userType: string | undefined) => {
       url: "/dashboard",
       icon: BarChart,
       isActive: true,
-      items: [
-        {
-          title: "Overview",
-          url: "/dashboard",
-        },
-        {
-          title: "Progress",
-          url: "/dashboard/progress",
-        },
-      ],
+      // items: [
+      //   {
+      //     title: "Overview",
+      //     url: "/dashboard",
+      //   },
+      //   {
+      //     title: "Progress",
+      //     url: "/dashboard/progress",
+      //   },
+      // ],
     },
     {
-      title: "Exams",
-      url: "/exams",
-      icon: FileText,
-      items: [
-        {
-          title: "Available Exams",
-          url: "/exams",
-        },
-        {
-          title: "My Results",
-          url: "/exams/results",
-        },
-      ],
-    },
-    {
-      title: "My Tutor",
-      url: "/tutor",
-      icon: GraduationCap,
-      items: [
-        {
-          title: "View Tutor",
-          url: "/tutor",
-        },
-        {
-          title: "Schedule",
-          url: "/tutor/schedule",
-        },
-      ],
-    },
-    {
-      title: "Profile",
-      url: "/profile",
-      icon: UserCog,
-      items: [
-        {
-          title: "Settings",
-          url: "/profile",
-        },
-        {
-          title: "Preferences",
-          url: "/profile/preferences",
-        },
-      ],
-    },
+      title: "Schedule",
+      url: "/schedule",
+      icon: Calendar,
+    }
+    // {
+    //   title: "Exams",
+    //   url: "/exams",
+    //   icon: FileText,
+    //   items: [
+    //     {
+    //       title: "Available Exams",
+    //       url: "/exams",
+    //     },
+    //     // {
+    //     //   title: "My Results",
+    //     //   url: "/exams/results",
+    //     // },
+    //   ],
+    // },
+    // {
+    //   title: "My Tutor",
+    //   url: "/tutor",
+    //   icon: GraduationCap,
+    //   items: [
+    //     {
+    //       title: "View Tutor",
+    //       url: "/tutor",
+    //     },
+    //     {
+    //       title: "Schedule",
+    //       url: "/tutor/schedule",
+    //     },
+    //   ],
+    // },
+    // {
+    //   title: "Profile",
+    //   url: "/profile",
+    //   icon: UserCog,
+    //   items: [
+    //     {
+    //       title: "Settings",
+    //       url: "/profile",
+    //     },
+    //     {
+    //       title: "Preferences",
+    //       url: "/profile/preferences",
+    //     },
+    //   ],
+    // },
   ]
 
   // Projects based on user type
