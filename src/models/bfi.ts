@@ -1,5 +1,5 @@
 /*
-  This model would assign answers to VARK attributes
+  This model assigns BFI attributes to questions instead of answers
 */
 
 import mongoose, { Schema, Document, Types } from "mongoose";
@@ -13,13 +13,13 @@ export enum BFIAttributes {
 };
 
 export interface IBfi extends Document {
-  answerId: Types.ObjectId;
+  questionId: Types.ObjectId;
   attribute: string;
   isReversed: boolean;
 };
 
 export const BfiSchema: Schema = new Schema ({
-  answerId: { type: Schema.Types.ObjectId, ref: "Answer" },
+  questionId: { type: Schema.Types.ObjectId, ref: "Question" },
   attribute: { type: String, enum: BFIAttributes },
   isReversed: { type: Boolean, default: false },
 });

@@ -23,8 +23,6 @@ interface Choice {
   id: string;
   text: string;
   isCorrect: boolean;
-  bfiAttribute: string | null;
-  isReversed: boolean;
 }
 
 interface Question {
@@ -32,6 +30,8 @@ interface Question {
   question: string;
   type: string;
   choices: Choice[];
+  bfiAttribute: string | null;
+  isReversed: boolean;
 }
 
 interface ExamDetails {
@@ -93,14 +93,12 @@ const Page = () => {
         // Initialize BFI mappings from existing data
         const newMappings = new Map<string, BfiMapping>();
         response.data.questions.forEach(question => {
-          question.choices.forEach(choice => {
-            if (choice.bfiAttribute) {
-              newMappings.set(choice.id, {
-                attribute: choice.bfiAttribute,
-                isReversed: choice.isReversed
-              });
-            }
-          });
+          if (question.bfiAttribute) {
+            newMappings.set(question.id, {
+              attribute: question.bfiAttribute,
+              isReversed: question.isReversed
+            });
+          }
         });
         setBfiMappings(newMappings);
       } else {
@@ -114,12 +112,12 @@ const Page = () => {
     }
   };
 
-  // Handle BFI attribute selection for an answer
-  const handleBfiAttributeSelect = (choiceId: string, attribute: string) => {
+  // Handle BFI attribute selection for a question
+  const handleBfiAttributeSelect = (questionId: string, attribute: string) => {
     setBfiMappings(prev => {
       const newMappings = new Map(prev);
-      const currentMapping = newMappings.get(choiceId) || { attribute: "", isReversed: false };
-      newMappings.set(choiceId, {
+      const currentMapping = newMappings.get(questionId) || { attribute: "", isReversed: false };
+      newMappings.set(questionId, {
         ...currentMapping,
         attribute: attribute as BFIAttributes
       });
@@ -128,11 +126,11 @@ const Page = () => {
   };
 
   // Handle reversed checkbox toggle
-  const handleReversedToggle = (choiceId: string, isReversed: boolean) => {
+  const handleReversedToggle = (questionId: string, isReversed: boolean) => {
     setBfiMappings(prev => {
       const newMappings = new Map(prev);
-      const currentMapping = newMappings.get(choiceId) || { attribute: "", isReversed: false };
-      newMappings.set(choiceId, {
+      const currentMapping = newMappings.get(questionId) || { attribute: "", isReversed: false };
+      newMappings.set(questionId, {
         ...currentMapping,
         isReversed
       });
@@ -150,8 +148,8 @@ const Page = () => {
       // Convert Map to array of mappings
       const mappings = Array.from(bfiMappings.entries())
         .filter(([_, mapping]) => mapping.attribute) // Only include mappings with an attribute
-        .map(([answerId, mapping]) => ({
-          answerId,
+        .map(([questionId, mapping]) => ({
+          questionId,
           attribute: mapping.attribute as BFIAttributes,
           isReversed: mapping.isReversed,
         }));
@@ -187,7 +185,7 @@ const Page = () => {
           <CardHeader>
             <CardTitle>Select Exam for BFI Assessment</CardTitle>
             <CardDescription>
-              Choose an exam to designate as the BFI assessment. For each answer, assign a BFI category (Extroversion, Neuroticism, Agreeableness, Conscientiousness, Openness) and indicate if the scoring is reversed.
+              Choose an exam to designate as the BFI assessment. For each question, assign a BFI category (Extroversion, Neuroticism, Agreeableness, Conscientiousness, Openness) and indicate if the scoring is reversed.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -226,53 +224,53 @@ const Page = () => {
                       <p className="text-sm text-muted-foreground">{question.question}</p>
                     </div>
                     
-                    <div className="space-y-2">
-                      {question.choices.map((choice) => {
-                        const mapping = bfiMappings.get(choice.id) || { attribute: "", isReversed: false };
-                        return (
-                          <div key={choice.id} className="flex items-center justify-between p-3 border rounded-md">
-                            <div className="flex-1">
-                              <p className="text-sm">{choice.text}</p>
-                              {/* {choice.isCorrect && (
-                                <span className="inline-flex items-center px-2 py-1 mt-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                  Correct Answer
-                                </span>
-                              )} */}
-                            </div>
-                            <div className="flex items-center space-x-4">
-                              <div className="w-48">
-                                <Select
-                                  value={mapping.attribute || ""}
-                                  onValueChange={(value) => handleBfiAttributeSelect(choice.id, value)}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select BFI category" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Object.entries(BFIAttributes).map(([key, value]) => (
-                                      <SelectItem key={key} value={value}>
-                                        {value}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`reversed-${choice.id}`}
-                                  checked={mapping.isReversed}
-                                  onCheckedChange={(checked) => 
-                                    handleReversedToggle(choice.id, checked as boolean)
-                                  }
-                                />
-                                <Label htmlFor={`reversed-${choice.id}`} className="text-sm">
-                                  Reversed
-                                </Label>
-                              </div>
-                            </div>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 border rounded-md">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">Assign BFI attribute to this question</p>
+                          <div className="mt-2">
+                            <p className="text-xs text-muted-foreground">Available choices:</p>
+                            <ul className="mt-1 space-y-1">
+                              {question.choices.map((choice) => (
+                                <li key={choice.id} className="text-xs">
+                                  • {choice.text} {choice.isCorrect && "(Correct)"}
+                                </li>
+                              ))}
+                            </ul>
                           </div>
-                        );
-                      })}
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="w-48">
+                            <Select
+                              value={(bfiMappings.get(question.id)?.attribute) || ""}
+                              onValueChange={(value) => handleBfiAttributeSelect(question.id, value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select BFI category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(BFIAttributes).map(([key, value]) => (
+                                  <SelectItem key={key} value={value}>
+                                    {value}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`reversed-${question.id}`}
+                              checked={bfiMappings.get(question.id)?.isReversed || false}
+                              onCheckedChange={(checked) => 
+                                handleReversedToggle(question.id, checked as boolean)
+                              }
+                            />
+                            <Label htmlFor={`reversed-${question.id}`} className="text-sm">
+                              Reversed
+                            </Label>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     
                     {qIndex < examDetails.questions.length - 1 && <Separator />}

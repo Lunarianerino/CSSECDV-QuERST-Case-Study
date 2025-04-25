@@ -10,7 +10,7 @@ import mongoose from "mongoose";
 
 // Interface for the BFI mapping data
 export interface BfiMapping {
-  answerId: string;
+  questionId: string;
   attribute: BFIAttributes;
   isReversed: boolean;
 }
@@ -73,15 +73,15 @@ export async function getExamDetailsForBfiAction(examId: string) {
       return { success: false, message: "Exam not found", data: null };
     }
 
-    // Get existing BFI mappings for this exam's answers
+    // Get existing BFI mappings for this exam's questions
     const existingMappings = await Bfi.find({
-      answerId: { $in: exam.questions.flatMap((q: any) => q.choices.map((c: any) => c._id)) }
+      questionId: { $in: exam.questions.map((q: any) => q._id) }
     });
 
-    // Create a map of answerId to attribute and isReversed for quick lookup
+    // Create a map of questionId to attribute and isReversed for quick lookup
     const mappingsMap = new Map();
     existingMappings.forEach((mapping: any) => {
-      mappingsMap.set(mapping.answerId.toString(), {
+      mappingsMap.set(mapping.questionId.toString(), {
         attribute: mapping.attribute,
         isReversed: mapping.isReversed
       });
@@ -98,16 +98,13 @@ export async function getExamDetailsForBfiAction(examId: string) {
           id: question._id.toString(),
           question: question.question,
           type: question.type,
-          choices: question.choices.map((choice: any) => {
-            const mapping = mappingsMap.get(choice._id.toString());
-            return {
-              id: choice._id.toString(),
-              text: choice.text,
-              isCorrect: choice.isCorrect,
-              bfiAttribute: mapping ? mapping.attribute : null,
-              isReversed: mapping ? mapping.isReversed : false,
-            };
-          }),
+          choices: question.choices.map((choice: any) => ({
+            id: choice._id.toString(),
+            text: choice.text,
+            isCorrect: choice.isCorrect,
+          })),
+          bfiAttribute: mappingsMap.get(question._id.toString())?.attribute || null,
+          isReversed: mappingsMap.get(question._id.toString())?.isReversed || false,
         })),
       },
     };
@@ -140,11 +137,11 @@ export async function saveBfiMappingsAction(data: BfiSubmissionData) {
     // Create new BFI mappings
     if (data.mappings.length > 0) {
       const bfiMappings = data.mappings.map(mapping => ({
-        answerId: mapping.answerId,
+        questionId: mapping.questionId,
         attribute: mapping.attribute,
         isReversed: mapping.isReversed,
       }));
-
+      console.log(bfiMappings);
       await Bfi.insertMany(bfiMappings);
     }
 
