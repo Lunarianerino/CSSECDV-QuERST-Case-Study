@@ -200,11 +200,11 @@ const Page = () => {
                         <div key={choice.id} className="flex items-center justify-between p-3 border rounded-md">
                           <div className="flex-1">
                             <p className="text-sm">{choice.text}</p>
-                            {choice.isCorrect && (
+                            {/* {choice.isCorrect && (
                               <span className="inline-flex items-center px-2 py-1 mt-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
                                 Correct Answer
                               </span>
-                            )}
+                            )} */}
                           </div>
                           <div className="w-48">
                             <Select
