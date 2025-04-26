@@ -65,9 +65,9 @@ const ExamsList = () => {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="icon">
+                    {/* <Button variant="outline" size="icon">
                       <Edit className="h-4 w-4" />
-                    </Button>
+                    </Button> */}
                     <Button size="icon" onClick={handleAssignOpen}>
                       <UserPlus className="h-4 w-4" />
                     </Button>
