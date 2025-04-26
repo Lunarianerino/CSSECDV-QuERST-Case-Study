@@ -68,7 +68,7 @@ const ExamCard: React.FC<ExamCardProps> = ({
 
     return (
         <>
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow w-96 h-52 text-center" onClick={handleExamClick}>
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow w-96 text-center" onClick={handleExamClick}>
                 <CardHeader>
                     <CardTitle>{name}</CardTitle>
                     {attemptNumber && <div className="text-xs text-gray-500 mt-1">Attempt {attemptNumber}</div>}
