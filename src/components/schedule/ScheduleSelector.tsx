@@ -7,7 +7,7 @@ import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { getScheduleAction, createOrUpdateScheduleAction, deleteScheduleAction } from "@/lib/actions/scheduleActions";
 import { toast } from "sonner";
-
+import { useRouter } from "next/navigation";
 
 const DEFAULT_SCHEDULE: WeeklySchedule = {
   monday: { intervals: [] },
@@ -22,6 +22,7 @@ const DEFAULT_SCHEDULE: WeeklySchedule = {
 const localizer = momentLocalizer(moment);
 
 const ScheduleSelector = () => {
+  const router = useRouter();
   const [schedule, setSchedule] = useState<WeeklySchedule>(DEFAULT_SCHEDULE);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,7 +46,7 @@ const ScheduleSelector = () => {
         console.error("Error fetching schedule:", error);
         toast.error("Failed to load your schedule. Please try again later.");
       } finally {
-        setIsLoading(false);
+        router.push("/dashboard");
       }
     };
 
