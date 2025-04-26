@@ -282,3 +282,9 @@
   }
 }
 
+@layer components {
+  .truncate-cell {
+    @apply max-w-[200px] truncate;
+  }
+}
+

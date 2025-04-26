@@ -91,25 +91,33 @@ const CreateExam = () => {
 
   // Handler for toggling correct answer
   const toggleCorrect = (id: string) => {
-    if (questionType === "choice") {
-      // For single choice questions, only one answer can be correct
-      setChoices(
-        choices.map(choice =>
-          choice.id === id
-            ? { ...choice, isCorrect: true }
-            : { ...choice, isCorrect: false }
-        )
-      );
-    } else {
-      // For multiple choice questions, multiple answers can be correct
-      setChoices(
-        choices.map(choice =>
-          choice.id === id
-            ? { ...choice, isCorrect: !choice.isCorrect }
-            : choice
-        )
-      );
-    }
+    // if (questionType === "choice") {
+    //   // For single choice questions, only one answer can be correct
+    //   setChoices(
+    //     choices.map(choice =>
+    //       choice.id === id
+    //         ? { ...choice, isCorrect: true }
+    //         : { ...choice, isCorrect: false }
+    //     )
+    //   );
+    // } else {
+    //   // For multiple choice questions, multiple answers can be correct
+    //   setChoices(
+    //     choices.map(choice =>
+    //       choice.id === id
+    //         ? { ...choice, isCorrect: !choice.isCorrect }
+    //         : choice
+    //     )
+    //   );
+    // }
+
+    setChoices(
+      choices.map(choice =>
+        choice.id === id
+          ? { ...choice, isCorrect: !choice.isCorrect }
+          : choice
+      )
+    );
   };
 
   // Handler for adding a question

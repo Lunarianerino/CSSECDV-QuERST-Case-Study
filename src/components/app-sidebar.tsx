@@ -102,6 +102,14 @@ const getNavigationData = (userType: string | undefined) => {
           title: "Create Exam",
           url: "/exams/create",
         },
+        {
+          title: "VARK",
+          url: "/admin/vark",
+        },
+        {
+          title: "BFI",
+          url: "/admin/bfi",
+        },
       ],
     },
     {
