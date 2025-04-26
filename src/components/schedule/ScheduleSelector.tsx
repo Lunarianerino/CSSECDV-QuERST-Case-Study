@@ -46,7 +46,7 @@ const ScheduleSelector = () => {
         console.error("Error fetching schedule:", error);
         toast.error("Failed to load your schedule. Please try again later.");
       } finally {
-        router.push("/dashboard");
+        setIsLoading(false);
       }
     };
 
@@ -271,7 +271,7 @@ const ScheduleSelector = () => {
       console.error("Error saving schedule:", error);
       toast.error("Failed to save your schedule. Please try again later.");
     } finally {
-      setIsSaving(false);
+      router.push("/dashboard");
     }
   };
 
