@@ -53,22 +53,48 @@ const ScheduleSelector = () => {
     fetchSchedule();
   }, []);
 
+  // Define day mapping once at the component level for consistency
+  const dayMap: Record<string, number> = {
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6
+  };
+  
+  // Reverse mapping from day index to day name
+  const dayIndexToName: Record<number, string> = {
+    0: "sunday",
+    1: "monday",
+    2: "tuesday",
+    3: "wednesday",
+    4: "thursday",
+    5: "friday",
+    6: "saturday"
+  };
+
   // Convert schedule to events for react-big-calendar
   const events = useMemo(() => {
     const allEvents:any[] = [];
 
-    // Create a base date for the week (using Monday as reference)
+    // Create a base date for the week (using Sunday as reference)
     const baseDate = new Date();
-    const day = baseDate.getDay();
-    // Adjust to previous Monday (0 is Sunday in JS)
-    baseDate.setDate(baseDate.getDate() - day);
+    // Set to the beginning of the current week (Sunday)
+    baseDate.setDate(baseDate.getDate() - baseDate.getDay());
     baseDate.setHours(0, 0, 0, 0);
 
     // Add availability events
-    Object.entries(schedule).forEach(([dayName, daySchedule], index) => {
+    Object.entries(schedule).forEach(([dayName, daySchedule]) => {
+        // Get the day number for this day name
+        const dayNumber = dayMap[dayName];
+        
         daySchedule.intervals.forEach((interval, intervalIndex) => {
+          // Create a new date for this specific day of the week
           const eventDate = new Date(baseDate);
-          eventDate.setDate(baseDate.getDate() + index);
+          // Set to the correct day of the week
+          eventDate.setDate(baseDate.getDate() + dayNumber);
 
           const [startHour, startMinute] = interval.start.split(":").map(Number);
           const [endHour, endMinute] = interval.end.split(":").map(Number);
@@ -155,14 +181,13 @@ const ScheduleSelector = () => {
     );
   };
 
+
   // Handle slot selection
   const handleSelectSlot = useCallback(
     ({ start, end }: { start: Date; end: Date }) => {
-      // Get day name from the date
-      const dayIndex = start.getDay();
-      // Convert to our day format (0 = Sunday in JS, but we want Monday as index 0)
-      // const adjustedDayIndex = dayIndex === 0 ? 6 : dayIndex - 1;
-      const dayName = days[dayIndex] as keyof WeeklySchedule;
+      // Get day name from the date using the correct mapping
+      const dayIndex = start.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const dayName = dayIndexToName[dayIndex] as keyof WeeklySchedule;
 
       // Format times to HH:MM format
       const startTime = `${start.getHours().toString().padStart(2, "0")}:${start
@@ -201,7 +226,7 @@ const ScheduleSelector = () => {
 
       setSchedule(updatedSchedule);
     },
-    [schedule, days]
+    [schedule, dayIndexToName]
   );
 
   const mergeIntervals = (intervals: TimeInterval[]): TimeInterval[] => {
@@ -347,7 +372,10 @@ const ScheduleSelector = () => {
             formats={{
               dayFormat: (date) => {
                 const dayIndex = date.getDay();
-                return dayLabels[dayIndex];
+                // Use the same dayIndexToName mapping for consistency
+                const dayName = dayIndexToName[dayIndex];
+                // Convert to proper display format (capitalize first letter)
+                return dayName.charAt(0).toUpperCase() + dayName.slice(1);
               },
             }}
             min={new Date(0, 0, 0, 8, 0)} // Start at 8 AM
