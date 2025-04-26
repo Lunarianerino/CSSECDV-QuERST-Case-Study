@@ -136,7 +136,7 @@ const CreateExam = () => {
       question: currentQuestion,
       type: questionType,
       choices: questionType !== "text" ? [...choices] : undefined,
-      points: currentPoints,
+      points: currentPoints || 1,
     };
 
     setQuestions([...questions, newQuestion]);
@@ -482,6 +482,7 @@ const CreateExam = () => {
                         </div>
                         <div className="mt-2 space-y-1">
                           <p className="text-sm font-medium">Type: {question.type === "choice" ? "Single Choice" : question.type === "multiple_choice" ? "Multiple Choice" : "Text Answer"}</p>
+                          <p className="text-sm font-mediu">Points: {question.points} </p>
                           {question.choices && question.choices.length > 0 && (
                             <>
                               <p className="text-sm font-medium">Choices:</p>

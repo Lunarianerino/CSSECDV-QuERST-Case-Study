@@ -3,9 +3,10 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { AccountType } from "@/models/account";
 // Explicitly define routes that require auth and onboarding
-const protectedRoutes = ['/dashboard', '/exams', '/exam'];
+const protectedRoutes = ['/dashboard', '/exam', '/schedule', '/onboarding'];
 const authPages = ['/login', '/register'];
 const adminRoutes = ['/admin']
+const tutorOrAdminRoutes = ['/exams', '/students']
 const indexRoute = ['/'];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -35,6 +36,7 @@ export async function middleware(request: NextRequest) {
   const isTutor = token?.type === AccountType.TUTOR;
   const isStudent = token?.type === AccountType.STUDENT;
   const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
+  const isTutorOrAdminRoute = tutorOrAdminRoutes.some(route => pathname.startsWith(route));
 
   // 🏠 Redirect index route to dashboard
   if (isAuth && isIndexRoute) {
@@ -55,7 +57,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/onboarding', request.url));
   }
 
+  // 👤 Redirect authenticated users who are onboarded and trying to access onboarding page
   if (isAuth && isOnboarded && isOnboardingPage) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // 👤 Redirect non-tutor/admin users trying to access tutor/admin routes
+  if (isTutorOrAdminRoute && isStudent) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
   // 👋 Prevent authenticated users from accessing login/register again

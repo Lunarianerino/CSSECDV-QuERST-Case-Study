@@ -17,7 +17,7 @@ export const authOptions: NextAuthOptions = {
         const user = await Account.findOne({
           email: credentials?.email,
         }).select("+password +type +onboarded +_id");
-        if (!user) throw new Error("Wrong Email");
+        if (!user) throw new Error("Wrong Email or Account does not exist");
         const passwordMatch = await compare(
           credentials!.password.toString(),
           user.password
