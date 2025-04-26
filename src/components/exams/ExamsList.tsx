@@ -19,6 +19,13 @@ import { Edit, UserPlus } from "lucide-react";
 const ExamsList = () => {
   const [examList, setExamList] = useState<ExamListItem[]>([]);
   const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [exam, setExam] = useState<ExamListItem>({
+    id: "",
+    name: "",
+    description: "",
+    required: false,
+    graded: false
+  });
   //TODO: loading state please
   const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
@@ -34,7 +41,8 @@ const ExamsList = () => {
   if (isLoading) {
     return <div>Loading...</div>;
   }
-  const handleAssignOpen = () => {
+  const handleAssignOpen = (exam: ExamListItem) => {
+    setExam(exam);
     setIsAssignOpen(true);
   }
   return (
@@ -68,33 +76,9 @@ const ExamsList = () => {
                     {/* <Button variant="outline" size="icon">
                       <Edit className="h-4 w-4" />
                     </Button> */}
-                    <Button size="icon" onClick={handleAssignOpen}>
+                    <Button size="icon" onClick={() => {handleAssignOpen(exam)}}>
                       <UserPlus className="h-4 w-4" />
                     </Button>
-                    <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Assign Exam: {exam.name}</DialogTitle>
-                          <DialogDescription>
-                            Select a user to assign this exam to
-                          </DialogDescription>
-                        </DialogHeader>
-                        <UsersModal
-                          examId={exam.id}
-                          onClose={() => {
-                            const dialogClose = document.querySelector('[data-radix-dialog-close]') as HTMLButtonElement;
-                            dialogClose?.click();
-                          }}
-                        />
-                        <DialogFooter className="sm:justify-start">
-                          <DialogClose id="closeDialog">
-                            <Button variant="outline" type="button">
-                              Cancel
-                            </Button>
-                          </DialogClose>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
                   </div>
                 </TableCell>
               </TableRow>
@@ -102,6 +86,28 @@ const ExamsList = () => {
           )}
         </TableBody>
       </Table>
+      <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Exam: {exam.name}</DialogTitle>
+            <DialogDescription>
+              Select a user to assign this exam to
+            </DialogDescription>
+          </DialogHeader>
+          <UsersModal
+            examId={exam.id}
+            onClose={() => {
+              const dialogClose = document.querySelector('[data-radix-dialog-close]') as HTMLButtonElement;
+              dialogClose?.click();
+            }}
+          />
+          <DialogFooter className="sm:justify-start">
+            <Button variant="outline" type="button" onClick={() => { setIsAssignOpen(false) }}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
   // return (
