@@ -33,7 +33,7 @@ export default function OnboardingForm() {
         body: JSON.stringify(data),
       });
 
-      console.log('Onboarding response:', response);
+      // console.log('Onboarding response:', response);
       if (!response.ok) {
         throw new Error('Failed to complete onboarding');
       }
@@ -44,7 +44,7 @@ export default function OnboardingForm() {
           user: {...updatedSession.user},
         });
       }
-      console.log('Onboarding successful');
+      // console.log('Onboarding successful');
       // Redirect to dashboard
       router.push('/schedule');
     } catch (error) {

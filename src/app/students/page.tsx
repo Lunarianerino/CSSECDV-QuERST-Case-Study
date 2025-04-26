@@ -87,7 +87,7 @@ export default function StudentsPage() {
   const handleOpenExams = (matchId: string) => {
     //TODO: set what to display here
     setActiveStudent(students.find(student => student.matchId === matchId));
-    console.log(activeStudent);
+    // console.log(activeStudent);
     setIsExamDetailsOpen(true);
   }
   return (

@@ -165,11 +165,11 @@ const CreateExam = () => {
       ...data,
       questions: questions
     };
-    console.log("Exam data:", examData);
+    // console.log("Exam data:", examData);
     const results = await createExam(examData);
     if (results.status !== 200) {
       toast.error(`Error creating exam: ${results.error}`);
-      console.log(results);
+      // console.log(results);
       return;
     }
 

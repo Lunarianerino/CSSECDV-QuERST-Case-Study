@@ -41,7 +41,7 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
       if (examStatus.status === UserExamStatus.FINISHED && examStatus.score !== undefined) {
         results = "Graded";
       }
-      console.log(examStatus.examId.type)
+      // console.log(examStatus.examId.type)
       return {
         id: examStatus._id.toString(),
         examId: examStatus.examId._id.toString(),

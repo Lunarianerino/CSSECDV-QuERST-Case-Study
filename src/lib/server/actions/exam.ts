@@ -8,7 +8,7 @@ import { AccountType } from "@/models/account";
 export const createExam = async (values: ExamFormValues) => {
   try {
     const session = await getServerSession(authOptions);
-    console.log(session);
+    // console.log(session);
 
     //TODO: tutors and admins can create exams
     if (!session || session.user?.type === AccountType.STUDENT || session.user?.type === AccountType.UNKNOWN) {
@@ -43,14 +43,14 @@ export const createExam = async (values: ExamFormValues) => {
         });
         const choice_result = await Choice.insertMany(choices);
         newQuestion.choices = choice_result.map((result) => result._id);
-        console.log(newQuestion.choices);
-        console.log("Choices saved");
+        // console.log(newQuestion.choices);
+        // console.log("Choices saved");
       }
 
-      console.log(newQuestion);
+      // console.log(newQuestion);
       const question_result = await newQuestion.save();
-      console.log("Question saved");
-      console.log(question_result);
+      // console.log("Question saved");
+      // console.log(question_result);
       return question_result._id;
     }));
 
@@ -65,14 +65,14 @@ export const createExam = async (values: ExamFormValues) => {
     });
 
     const exam_result = await exam.save();
-    console.log("Exam saved");
-    console.log(exam_result);
+    // console.log("Exam saved");
+    // console.log(exam_result);
     return {
       success: true,
       status: 200,
     } 
   } catch (error) {
-    console.log(error)
+    // console.log(error)
     return { 
       success: false, 
       error: "Internal Server Error", 

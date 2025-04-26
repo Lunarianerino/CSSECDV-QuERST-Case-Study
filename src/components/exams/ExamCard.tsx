@@ -50,7 +50,7 @@ const ExamCard: React.FC<ExamCardProps> = ({
 
     const handleExamClick = () => {
         // Handle exam click
-        console.log(`Exam ${id} clicked`);
+        // console.log(`Exam ${id} clicked`);
         setOpen(true);
     }
 

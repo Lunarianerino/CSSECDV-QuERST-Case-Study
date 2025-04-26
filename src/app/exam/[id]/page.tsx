@@ -26,7 +26,7 @@ const ExamContent = () => {
           console.error("Exam not found");
           return; 
         }
-        console.log(examDetails);
+        // console.log(examDetails);
         
         if (examDetails?.questions) {
           // Map API question format to match ExamContext Question format
@@ -74,7 +74,7 @@ const ExamContent = () => {
             loaded: true
           }));
 
-          console.log(state)
+          // console.log(state)
 
         }
 
@@ -104,7 +104,7 @@ const ExamContent = () => {
 
   useEffect(() => {
     if (state.isFinished) {
-      console.log("Exam finished!");
+      // console.log("Exam finished!");
       redirect("/dashboard"); 
     }
   }, [state.isFinished])

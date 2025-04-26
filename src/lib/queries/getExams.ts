@@ -11,7 +11,7 @@ export interface ExamDetails {
 export default async function getExams(): Promise<ExamDetails[]> {
   await connectToMongoDB();
   const exams = await Exam.find({}, { _id: 1 ,name: 1, description: 1 });
-  console.log(exams);
+  // console.log(exams);
   const processed_exams = await exams.map((exam) => {
     return {
       id: exam._id.toString(),
@@ -19,6 +19,6 @@ export default async function getExams(): Promise<ExamDetails[]> {
       description: exam.description,
     };
   });
-  console.log(processed_exams);
+  // console.log(processed_exams);
   return processed_exams;
 }

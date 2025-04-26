@@ -209,7 +209,7 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setState((prev) => ({ ...prev, isFinished: true }));
       
     setFinishedExamStatusAction(state.examId).then(() => {
-      console.log("Exam submitted:", state.answers);
+      // console.log("Exam submitted:", state.answers);
       toast.success("Exam submitted successfully!", {
         description: `Completed with ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
       });
@@ -223,7 +223,7 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetExam = () => {
     // Reset the submission tracking
-    console.log("Resetting exam...");
+    // console.log("Resetting exam...");
     hasSubmittedRef.current = false;
     lastToastTimeRef.current = 0;
     

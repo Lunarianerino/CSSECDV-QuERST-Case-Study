@@ -73,7 +73,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
           //   };
           // });
           const formattedResults = Array.from(uniqueStudentsMap.values());
-          console.log(formattedResults);
+          // console.log(formattedResults);
           setUsers(formattedResults);
         } else {
           throw new Error("Unauthorized");

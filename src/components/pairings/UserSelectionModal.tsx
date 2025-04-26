@@ -63,7 +63,7 @@ const UserSelectionModal = ({
     const selectedTutor = tutors.find((tutor) => tutor._id === tutorId);
     if (selectedTutor) {
       onSelectTutor(selectedTutor);
-      console.log("Selected Tutor:", selectedTutor);
+      // console.log("Selected Tutor:", selectedTutor);
     }
   };
 
@@ -71,7 +71,7 @@ const UserSelectionModal = ({
     const selectedStudent = students.find((student) => student._id === studentId);
     if (selectedStudent) {
       onSelectStudent(selectedStudent);
-      console.log("Selected Student:", selectedStudent);
+      // console.log("Selected Student:", selectedStudent);
     }
   };
 

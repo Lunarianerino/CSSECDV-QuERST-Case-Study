@@ -23,8 +23,8 @@ export async function middleware(request: NextRequest) {
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
-  console.log("Token:")
-  console.log(token);
+  // console.log("Token:")
+  // console.log(token);
   const isAuth = !!token;
   const isOnboarded = token?.onboarded;
   const isAuthPage = authPages.includes(pathname);

@@ -104,11 +104,11 @@ export async function getPairedStudentsAction(): Promise<StudentWithExams[]> {
               } else if (question.type === "choice") {
                 // Single choice question
                 const selectedId = answer.answers_choice[0];
-                console.log(`${question.choices}`)
+                // console.log(`${question.choices}`)
                 const selectedChoice = question.choices.find(c => c._id.toString() === selectedId);
                 
-                console.log(`Selected ID: ${selectedId}`);
-                console.log(`Selected Choice: ${selectedChoice}`);
+                // console.log(`Selected ID: ${selectedId}`);
+                // console.log(`Selected Choice: ${selectedChoice}`);
                 if (selectedChoice?.isCorrect) {
                   correctAnswers++;
                 } else {
@@ -164,7 +164,7 @@ export async function getPairedStudentsAction(): Promise<StudentWithExams[]> {
         };
       }));
 
-      console.log(exams);
+      // console.log(exams);
       return {
         matchId: matchId,
         studentId: student._id.toString(),

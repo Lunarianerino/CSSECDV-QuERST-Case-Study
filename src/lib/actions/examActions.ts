@@ -62,7 +62,7 @@ export async function getExamByAttempt(attemptId: string): Promise<ExamDetailsWi
     if (!examStatus) {
       throw new Error("Exam attempt not found");
     }
-    console.log(examStatus.questions)
+    // console.log(examStatus.questions)
     return {
       id: attemptId,
       name: examStatus.examId.name,
@@ -254,7 +254,7 @@ export async function saveExamAnswerAction(
       }
       //! This section might not be working
       examStatus.answers.push(answer._id);
-      console.log(examStatus.answers);
+      // console.log(examStatus.answers);
       await examStatus.save();
     }
 
@@ -410,7 +410,7 @@ export async function assignExamToUserAction(
       attemptNumber: nextAttemptNumber,
     });
 
-    console.log(newAttempt);
+    // console.log(newAttempt);
     return {
       success: true,
       message: "Exam assigned successfully.",

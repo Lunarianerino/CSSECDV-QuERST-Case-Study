@@ -22,7 +22,7 @@ export const authOptions: NextAuthOptions = {
           credentials!.password.toString(),
           user.password
         );
-        console.log(user);
+        // console.log(user);
         if (!passwordMatch) throw new Error("Wrong Password");
         return {
           id: user._id.toString(),

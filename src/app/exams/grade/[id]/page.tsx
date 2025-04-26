@@ -273,9 +273,9 @@ export default function GradeExamPage() {
                         <ul className="space-y-2">
                         {question.choices?.map(choice => {
                             const isSelected = answer?.answers_choice?.includes(choice.id);
-                            console.log(choice.id)
-                            console.log(answer)
-                            console.log(isSelected)
+                            // console.log(choice.id)
+                            // console.log(answer)
+                            // console.log(isSelected)
                             return (
                               <li key={choice.id} className="flex items-start gap-2">
                                 <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${isSelected ? 'bg-primary text-primary-foreground' : 'border border-border'}`}>

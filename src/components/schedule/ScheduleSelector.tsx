@@ -33,12 +33,12 @@ const ScheduleSelector = () => {
     const fetchSchedule = async () => {
       setIsLoading(true);
       try {
-        console.log("Fetching response")
+        // console.log("Fetching response")
 
         const response = await getScheduleAction();
-        console.log(response)
+        // console.log(response)
         if (response.success && response.data) {
-          console.log(response)
+          // console.log(response)
           setSchedule(response.data);
         }
       } catch (error) {

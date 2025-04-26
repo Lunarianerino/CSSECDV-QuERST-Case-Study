@@ -23,7 +23,7 @@ export const register = async (values: any) => {
         message: "User created successfully",
       };
   }catch(e){
-      console.log(e);
+      // console.log(e);
       throw e;
   }
 }
