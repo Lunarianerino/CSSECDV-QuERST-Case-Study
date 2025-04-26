@@ -54,7 +54,7 @@ const ScheduleSelector = () => {
 
   // Convert schedule to events for react-big-calendar
   const events = useMemo(() => {
-    const allEvents = [];
+    const allEvents:any[] = [];
 
     // Create a base date for the week (using Monday as reference)
     const baseDate = new Date();
@@ -207,7 +207,7 @@ const ScheduleSelector = () => {
     if (intervals.length <= 1) return intervals;
 
     const sortedIntervals = [...intervals].sort((a, b) => (a.start > b.start ? 1 : -1));
-    const result = [];
+    const result:any[] = [];
     let current = sortedIntervals[0];
 
     for (let i = 1; i < sortedIntervals.length; i++) {
@@ -230,7 +230,7 @@ const ScheduleSelector = () => {
   };
 
   const removeTimeRange = (intervals: TimeInterval[], rangeToRemove: TimeInterval): TimeInterval[] => {
-    const result = [];
+    const result:any[] = [];
 
     intervals.forEach(interval => {
       if (interval.end <= rangeToRemove.start || interval.start >= rangeToRemove.end) {

@@ -78,4 +78,10 @@ export async function middleware(request: NextRequest) {
 // Match all routes except static/image/etc.
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  runtime: 'nodejs', // Specify Node.js runtime instead of Edge
+  unstable_allowDynamic: [
+    "./models/**/*.ts",
+    "./node_modules/mongoose/**",
+    "./node_modules/mongoose/dist/browser.umd.js"
+  ],
 };

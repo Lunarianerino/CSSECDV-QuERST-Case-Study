@@ -67,7 +67,7 @@ export async function savePairedScheduleAction(
     // const assignmentId = session.user.id;
     
     // Process each interval for both users
-    const allUpdateResults = [];
+    const allUpdateResults:any[] = [];
     
     for (const interval of intervalsToUse) {
       // Convert time strings to minutes for easier manipulation

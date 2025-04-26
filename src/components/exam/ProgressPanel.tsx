@@ -22,7 +22,7 @@ export const ProgressPanel: React.FC = () => {
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
 
-    const parts = [];
+    const parts:any[] = [];
     
     if (hours > 0) {
       parts.push(`${hours}h`);
