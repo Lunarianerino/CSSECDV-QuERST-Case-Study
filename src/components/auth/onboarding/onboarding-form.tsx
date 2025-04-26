@@ -49,8 +49,8 @@ export default function OnboardingForm() {
       router.push('/schedule');
     } catch (error) {
       console.error('Onboarding error:', error);
-    } finally {
       setIsLoading(false);
+
     }
   }
 
