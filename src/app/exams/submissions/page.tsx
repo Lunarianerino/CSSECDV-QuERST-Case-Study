@@ -60,6 +60,16 @@ export default function ExamSubmissionsPage() {
     router.push(`/exams/grade/${submissionId}`);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-lg font-medium">Loading exam creation form...</p>
+        </div>
+      </div>
+    )
+  }
   return (
     <DashboardLayout title="Exam Submissions">
       <Card>
@@ -67,14 +77,7 @@ export default function ExamSubmissionsPage() {
           <CardTitle>Submissions</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="min-h-screen bg-background p-6 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-lg font-medium">Loading exam creation form...</p>
-              </div>
-            </div>
-          ) : submissions.length === 0 ? (
+          { submissions.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No submissions found</p>
               <p className="text-sm mt-2">When students complete exams, they will appear here for grading.</p>
