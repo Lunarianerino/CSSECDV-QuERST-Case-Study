@@ -7,6 +7,7 @@ import { ExamProvider, useExam } from "@/context/ExamContext";
 import { cn } from "@/lib/utils";
 import { redirect, useParams } from "next/navigation";
 import { getExamByAttempt, setStartedExamStatusAction } from "@/lib/actions/examActions";
+import { Loader2 } from "lucide-react";
 
 //TODO: FIX in the future (add toast)
 const ExamContent = () => {
@@ -142,9 +143,16 @@ const ExamContent = () => {
   const answeredCount = Object.keys(answers).length;
   const allQuestionsAnswered = answeredCount === questions.length;
 
-  //TODO: Replace with loading context
+  //TODO: Replace with loading context / skeleton
   if (state.loaded === false) {
-    return <div>Loading... (Replace with loading context)</div>;
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-lg font-medium">Loading Exam...</p>
+        </div>
+      </div>
+    );
   }
   return (
     <div className="flex h-screen overflow-hidden">
