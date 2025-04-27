@@ -38,7 +38,7 @@ const CreateExam = () => {
   const [currentChoice, setCurrentChoice] = useState<string>("");
   const [examTypes, setExamTypes] = useState<ExamTypes[]>();
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   // Configure form
   const form = useForm<ExamFormValues>({
     resolver: zodResolver(examSchema),
@@ -163,8 +163,15 @@ const CreateExam = () => {
 
   // Handle form submission
   const onSubmit = async (data: ExamFormValues) => {
+    setIsSaving(true);
+    toast.loading("Creating exam...", {
+      id: "exam-creation",
+    });
     if (questions.length === 0) {
-      toast.error("You must add at least one question");
+      toast.error("You must add at least one question", {
+        id: "exam-creation",
+      });
+      setIsSaving(false);
       return;
     }
 
@@ -176,14 +183,14 @@ const CreateExam = () => {
     // console.log("Exam data:", examData);
     const results = await createExam(examData);
     if (results.status !== 200) {
-      toast.error(`Error creating exam: ${results.error}`);
-      // console.log(results);
+      toast.error(`Error creating exam: ${results.error}`, { id: "exam-creation" });
+      setIsSaving(false);
       return;
+      // console.log(results);
     }
 
-    toast.success("Exam created successfully");
-    //TODO: ideally, iba dapat to for admins
-    router.push("/dashboard");
+    toast.success("Exam created successfully", { id: "exam-creation" });
+    router.push("/exams");
   };
 
   if (isLoading) {
@@ -417,6 +424,7 @@ const CreateExam = () => {
                             variant="outline"
                             size="icon"
                             onClick={() => removeChoice(choice.id)}
+                            disabled={isLoading || isSaving}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>
@@ -434,6 +442,7 @@ const CreateExam = () => {
                           type="button"
                           onClick={addChoice}
                           variant="outline"
+                          disabled={!currentChoice.trim() || isLoading || isSaving}
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Add Choice
@@ -462,6 +471,7 @@ const CreateExam = () => {
                     type="button"
                     onClick={addQuestion}
                     className="w-full"
+                    disabled={isLoading || isSaving || !currentQuestion.trim() || ((questionType === "choice" || questionType === "multiple_choice") && choices.length < 2)}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add Question
@@ -484,6 +494,7 @@ const CreateExam = () => {
                             variant="outline"
                             size="icon"
                             onClick={() => removeQuestion(index.toString())}
+                            disabled={isLoading || isSaving}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>
@@ -518,8 +529,8 @@ const CreateExam = () => {
               <Button type="button" variant="outline" onClick={() => router.push("/admin/dashboard")}>
                 Cancel
               </Button>
-              <Button type="submit">
-                Create Exam
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Creating Exam..." : "Create Exam"}
               </Button>
             </div>
           </form>
