@@ -34,7 +34,7 @@ type ExamContextType = {
   selectMultipleAnswers: (questionId: string, choiceIds: string[]) => void;
   selectTextAnswer: (questionId: string, text: string) => void;
   saveProgress: () => Promise<void>;
-  submitExam: () => void;
+  submitExam: () => Promise<void>;
   resetExam: () => void;
 };
 
@@ -195,30 +195,62 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Track if exam has been submitted to prevent duplicate submissions
   const hasSubmittedRef = React.useRef<boolean>(false);
 
-  const submitExam = () => {
+  const submitExam = async () => {
+    toast.loading("Submitting exam...",
+      {
+        description: "Please wait...",
+        position: "bottom-right",
+        id: "submitting-exam"
+      }
+    );
     // Prevent duplicate submissions
     if (hasSubmittedRef.current) return;
     // check if all questions are answered
     if (Object.keys(state.answers).length !== state.questions.length) {
       toast.error("Please answer all questions before submitting", {
         description: `You have ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
+        position: "bottom-right",
+        id: "submitting-exam"
       });
       return;
     }
     hasSubmittedRef.current = true;
     setState((prev) => ({ ...prev, isFinished: true }));
-      
-    setFinishedExamStatusAction(state.examId).then(() => {
-      // console.log("Exam submitted:", state.answers);
-      toast.success("Exam submitted successfully!", {
-        description: `Completed with ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
-      });
-    }).catch((error) => {
+    try {
+      const result = await setFinishedExamStatusAction(state.examId);
+      if (result.success) {
+        toast.success("Exam submitted successfully!", {
+          description: `Completed with ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
+          position: "bottom-right",
+          id: "submitting-exam"
+        });
+      } else {
+        toast.error("Failed to submit exam", {
+          description: "Please try again",
+          position: "bottom-right",
+          id: "submitting-exam"
+        });
+      }
+    } catch (error) {
       console.error("Error submitting exam:", error);
       toast.error("Failed to submit exam", {
         description: "Please try again",
+        position: "bottom-right",
+        id: "submitting-exam"
       });
-    });
+    }
+
+    // setFinishedExamStatusAction(state.examId).then(() => {
+    //   // console.log("Exam submitted:", state.answers);
+    //   toast.success("Exam submitted successfully!", {
+    //     description: `Completed with ${Object.keys(state.answers).length}/${state.questions.length} questions answered`,
+    //   });
+    // }).catch((error) => {
+    //   console.error("Error submitting exam:", error);
+    //   toast.error("Failed to submit exam", {
+    //     description: "Please try again",
+    //   });
+    // });
   };
 
   const resetExam = () => {
@@ -237,7 +269,13 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveProgress = async () => {
     // Set saving state to true
     setState(prev => ({ ...prev, isSaving: true }));
-    
+    toast.loading("Progress saving...", 
+      {
+        description: "Please wait...",
+        position: "bottom-right",
+        id: "saving-progress"
+      }
+    )
     try {
       // Get all answers that need to be saved
       const { answers, examId, questions } = state;
@@ -274,12 +312,15 @@ export const ExamProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success("Progress saved", {
         description: `Saved ${answerEntries.length} answers`,
         position: "bottom-right",
+        id: "saving-progress"
       });
       
     } catch (error) {
       console.error("Failed to save progress:", error);
       toast.error("Failed to save progress", {
         description: "Please try again",
+        position: "bottom-right",
+        id: "saving-progress"
       });
     } finally {
       // Set saving state back to false

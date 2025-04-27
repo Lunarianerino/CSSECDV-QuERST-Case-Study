@@ -129,7 +129,7 @@ const ExamContent = () => {
     // Save progress before submitting the exam
     setIsSaving(true);
     await saveProgress();
-    submitExam();
+    await submitExam();
     setIsSaving(false);
   };
 
@@ -203,7 +203,7 @@ const ExamContent = () => {
                   <span className="font-medium text-foreground">{answeredCount}</span> of <span className="font-medium text-foreground">{questions.length}</span> questions answered
                 </p>
               </div>
-              <Button
+              {/* <Button
                 onClick={handleSubmit}
                 className={cn(
                   "bg-primary text-primary-foreground transition-all",
@@ -212,7 +212,7 @@ const ExamContent = () => {
                 disabled={!allQuestionsAnswered}
               >
                 Submit Exam
-              </Button>
+              </Button> */}
             </div>
           </div>
         </div>
