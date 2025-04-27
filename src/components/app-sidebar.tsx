@@ -162,7 +162,7 @@ const getNavigationData = (userType: string | undefined) => {
         },
         {
           title: "Submissions",
-          url: "/exams/grade",
+          url: "/exams/submissions",
         }
       ],
     },
