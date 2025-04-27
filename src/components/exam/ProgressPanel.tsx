@@ -76,7 +76,7 @@ export const ProgressPanel: React.FC = () => {
           <ScrollArea className="h-[220px] rounded-md border">
             <div className="p-4 space-y-2">
               {questions.map((question, index) => (
-                <button
+                <div
                   key={question.id}
                   className={cn(
                     "flex items-center w-full text-left px-3 py-2 rounded-md transition-all",
@@ -86,7 +86,7 @@ export const ProgressPanel: React.FC = () => {
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                   )}
-                  onClick={() => handleQuestionSelect(index)}
+                  // onClick={() => handleQuestionSelect(index)}
                 >
                   <span className="mr-3 flex items-center justify-center w-6 h-6 rounded-full bg-background/60 text-xs font-medium">
                     {index + 1}
@@ -94,7 +94,7 @@ export const ProgressPanel: React.FC = () => {
                   <span className="text-sm font-medium">
                     Question {index + 1}
                   </span>
-                </button>
+                </div>
               ))}
             </div>
           </ScrollArea>
