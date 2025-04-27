@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { UserExamStatus } from "@/models/examStatus";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 interface ExamSubmission {
   id: string;
@@ -35,11 +36,11 @@ export default function ExamSubmissionsPage() {
         setLoading(true);
         // This would be replaced with an actual API call to get submissions
         const response = await fetch('/api/exam-submissions');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch submissions');
         }
-        
+
         const data = await response.json();
         setSubmissions(data);
       } catch (error) {
@@ -63,11 +64,16 @@ export default function ExamSubmissionsPage() {
     <DashboardLayout title="Exam Submissions">
       <Card>
         <CardHeader>
-          <CardTitle>Submissions Pending Review</CardTitle>
+          <CardTitle>Submissions</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p>Loading submissions...</p>
+            <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-lg font-medium">Loading exam creation form...</p>
+              </div>
+            </div>
           ) : submissions.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">No submissions found</p>
@@ -96,13 +102,13 @@ export default function ExamSubmissionsPage() {
                     <TableCell>{submission.userName}</TableCell>
                     <TableCell>
                       <div className="space-x-1">
-                      <Badge variant={submission.status === UserExamStatus.FINISHED ? "default" : "secondary"}>
-                        {submission.status.toUpperCase()}
-                      </Badge>
-                      <Badge variant={submission.graded ? "default" : "outline"} className="mt-1">
-                        {submission.graded ? "SUMMATIVE" : "FORMATIVE"}
-                      </Badge>
-                      
+                        <Badge variant={submission.status === UserExamStatus.FINISHED ? "default" : "secondary"}>
+                          {submission.status.toUpperCase()}
+                        </Badge>
+                        <Badge variant={submission.graded ? "default" : "outline"} className="mt-1">
+                          {submission.graded ? "SUMMATIVE" : "FORMATIVE"}
+                        </Badge>
+
                       </div>
 
                     </TableCell>
@@ -111,15 +117,15 @@ export default function ExamSubmissionsPage() {
                     </TableCell>
                     <TableCell>{submission.attemptNumber}</TableCell>
                     <TableCell>
-                      {submission.score !== undefined ? 
+                      {submission.score !== undefined ?
                         <div className="flex flex-col">
                           <span>{submission.score || 0}</span>
-                        </div> : 
+                        </div> :
                         <Badge variant="outline">No Score</Badge>
                       }
                     </TableCell>
                     <TableCell>
-                      <Button 
+                      <Button
                         onClick={() => handleGradeClick(submission.id)}
                         disabled={submission.status !== UserExamStatus.FINISHED}
                         size="sm"
