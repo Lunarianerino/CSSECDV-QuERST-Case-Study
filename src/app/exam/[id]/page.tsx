@@ -13,6 +13,8 @@ const ExamContent = () => {
   const { state, setCurrentQuestion, submitExam, setState, saveProgress } = useExam();
   const { questions, currentQuestionIndex, answers } = state;
   const [isSaving, setIsSaving] = React.useState(false);
+  const [examDescription, setExamDescription] = React.useState("");
+  const [examName, setExamName] = React.useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const params = useParams();
   const attemptId = params.id as string;
@@ -75,6 +77,8 @@ const ExamContent = () => {
             loaded: true
           }));
 
+          setExamDescription(examDetails.description);
+          setExamName(examDetails.name);
           // console.log(state)
 
         }
@@ -150,8 +154,9 @@ const ExamContent = () => {
       >
         <div className="max-w-3xl mx-auto">
           <header className="mb-8">
-            <h1 className="text-3xl font-medium tracking-tight mb-2">Multiple Choice Exam</h1>
+            <h1 className="text-3xl font-medium tracking-tight mb-2">{examName}</h1>
             <p className="text-muted-foreground">Answer all {questions.length} questions and submit your exam.</p>
+            <p className="text-muted-foreground">{examDescription}</p>
           </header>
 
           <QuestionCard
