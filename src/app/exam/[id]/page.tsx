@@ -12,6 +12,7 @@ import { getExamByAttempt, setStartedExamStatusAction } from "@/lib/actions/exam
 const ExamContent = () => {
   const { state, setCurrentQuestion, submitExam, setState, saveProgress } = useExam();
   const { questions, currentQuestionIndex, answers } = state;
+  const [isSaving, setIsSaving] = React.useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const params = useParams();
   const attemptId = params.id as string;
@@ -111,8 +112,10 @@ const ExamContent = () => {
   const handleNext = async () => {
     if (currentQuestionIndex < questions.length - 1) {
       // Save progress before moving to the next question
+      setIsSaving(true);
       await saveProgress();
       setCurrentQuestion(currentQuestionIndex + 1);
+      setIsSaving(false);
     }
   };
 
@@ -124,8 +127,10 @@ const ExamContent = () => {
 
   const handleSubmit = async () => {
     // Save progress before submitting the exam
+    setIsSaving(true);
     await saveProgress();
     submitExam();
+    setIsSaving(false);
   };
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -162,7 +167,7 @@ const ExamContent = () => {
             <Button
               variant="outline"
               onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
+              disabled={currentQuestionIndex === 0 || isSaving}
               className="transition-all"
             >
               Previous
@@ -175,7 +180,7 @@ const ExamContent = () => {
                 "bg-primary text-primary-foreground transition-all",
                 allQuestionsAnswered && "animate-pulse-subtle"
               )}
-              disabled={!allQuestionsAnswered}
+              disabled={!allQuestionsAnswered || isSaving}
             >
               Submit Exam
             </Button>
@@ -184,6 +189,7 @@ const ExamContent = () => {
                 onClick={handleNext}
                 variant="outline"
                 className="transition-all"
+                disabled={isSaving}
               >
                 Next
               </Button>
