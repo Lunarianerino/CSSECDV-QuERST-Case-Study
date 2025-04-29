@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { AccountType } from "@/models/account";
+
+// Set runtime to nodejs to avoid Edge Runtime compatibility issues with Mongoose
+export const runtime = 'nodejs';
 // Explicitly define routes that require auth and onboarding
 const protectedRoutes = ['/dashboard', '/exam', '/schedule', '/onboarding'];
 const authPages = ['/login', '/register'];
@@ -78,10 +81,4 @@ export async function middleware(request: NextRequest) {
 // Match all routes except static/image/etc.
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
-  runtime: 'nodejs', // Specify Node.js runtime instead of Edge
-  unstable_allowDynamic: [
-    "./models/**/*.ts",
-    "./node_modules/mongoose/**",
-    "./node_modules/mongoose/dist/browser.umd.js"
-  ],
 };
