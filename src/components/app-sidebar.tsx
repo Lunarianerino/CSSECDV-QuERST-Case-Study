@@ -69,20 +69,6 @@ const getNavigationData = (userType: string | undefined) => {
       title: "Users",
       url: "/admin/users",
       icon: Users,
-      items: [
-        {
-          title: "All Users",
-          url: "/admin/users",
-        },
-        {
-          title: "Tutors",
-          url: "/admin/users/tutors",
-        },
-        {
-          title: "Students",
-          url: "/admin/users/students",
-        },
-      ],
     },
     {
       title: "Pairings",
