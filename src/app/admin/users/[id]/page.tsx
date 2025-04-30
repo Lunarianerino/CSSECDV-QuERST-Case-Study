@@ -18,6 +18,24 @@ import { MatchStatus } from "@/models/match";
 
 const localizer = momentLocalizer(moment);
 
+// Custom toolbar to remove navigation and date display
+const CustomToolbar = () => null;
+
+// Custom event component to style availability and assignments
+const EventComponent = ({ event }: any) => {
+  // Check if the event is assigned or available
+  const isAssigned = event.resource.type === "assigned";
+  
+  return (
+    <div 
+      className={`h-full w-full p-1 overflow-hidden text-xs flex flex-col justify-start ${isAssigned ? "bg-orange-300" : "bg-primary/20"}`}
+      title={isAssigned ? "Reserved slot" : "Available time slot"}
+    >
+      {event.title}
+    </div>
+  );
+};
+
 const UserProfilePage = () => {
   const { id } = useParams();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -47,6 +65,28 @@ const UserProfilePage = () => {
     fetchUserProfile();
   }, [id]);
 
+  // Define day mapping once at the component level for consistency
+  const dayMap: Record<string, number> = {
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6
+  };
+  
+  // Reverse mapping from day index to day name
+  const dayIndexToName: Record<number, string> = {
+    0: "sunday",
+    1: "monday",
+    2: "tuesday",
+    3: "wednesday",
+    4: "thursday",
+    5: "friday",
+    6: "saturday"
+  };
+
   // Convert schedule to events for react-big-calendar
   const convertScheduleToEvents = (schedule: any) => {
     const events: any[] = [];
@@ -56,17 +96,6 @@ const UserProfilePage = () => {
     // Set to the beginning of the current week (Sunday)
     baseDate.setDate(baseDate.getDate() - baseDate.getDay());
     baseDate.setHours(0, 0, 0, 0);
-
-    // Day mapping
-    const dayMap: Record<string, number> = {
-      sunday: 0,
-      monday: 1,
-      tuesday: 2,
-      wednesday: 3,
-      thursday: 4,
-      friday: 5,
-      saturday: 6
-    };
 
     // Add availability events
     Object.entries(schedule).forEach(([dayName, daySchedule]: [string, any]) => {
@@ -89,12 +118,25 @@ const UserProfilePage = () => {
         const end = new Date(eventDate);
         end.setHours(endHour, endMinute, 0, 0);
 
+        // Determine if the slot is available or assigned based on assignment property
+        const isAssigned = interval.assignment !== undefined && interval.assignment !== null;
+        
+        // Get the assigned user's name if available
+        const assignedUserName = isAssigned && interval.assignment && typeof interval.assignment === 'object' && 'name' in interval.assignment 
+          ? (interval.assignment as any).name 
+          : null;
+        
         events.push({
-          id: `${dayName}-${intervalIndex}`,
-          title: "Available",
+          id: `${isAssigned ? 'assigned' : 'availability'}-${dayName}-${intervalIndex}`,
+          title: isAssigned ? (assignedUserName ? `${assignedUserName}` : "Reserved") : "Available",
           start,
           end,
           allDay: false,
+          resource: { 
+            type: isAssigned ? "assigned" : "availability", 
+            day: dayName,
+            assignment: interval.assignment
+          },
         });
       });
     });
@@ -118,8 +160,8 @@ const UserProfilePage = () => {
     switch (status) {
       case UserExamStatus.NOT_STARTED:
         return <Badge variant="outline">Not Started</Badge>;
-      case UserExamStatus.IN_PROGRESS:
-        return <Badge variant="secondary">In Progress</Badge>;
+      case UserExamStatus.STARTED:
+        return <Badge variant="secondary">Started</Badge>;
       case UserExamStatus.FINISHED:
         return <Badge variant="default">Completed</Badge>;
       default:
@@ -195,17 +237,43 @@ const UserProfilePage = () => {
                 <CardTitle>User Schedule</CardTitle>
               </CardHeader>
               <CardContent>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="text-lg font-semibold">Weekly Schedule</div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 bg-primary/20 rounded"></div>
+                    <span className="text-sm text-muted-foreground">Available</span>
+                    <div className="h-4 w-4 bg-orange-300 rounded ml-2"></div>
+                    <span className="text-sm text-muted-foreground">Reserved</span>
+                  </div>
+                </div>
+                
                 {calendarEvents.length > 0 ? (
-                  <div className="h-[600px]">
+                  <div className="h-[500px]">
                     <BigCalendar
                       localizer={localizer}
                       events={calendarEvents}
-                      startAccessor="start"
-                      endAccessor="end"
                       defaultView={Views.WEEK}
                       views={[Views.WEEK]}
-                      step={60}
-                      showMultiDayTimes
+                      step={30}
+                      timeslots={2}
+                      toolbar={false}
+                      startAccessor="start"
+                      endAccessor="end"
+                      components={{
+                        event: EventComponent,
+                        toolbar: CustomToolbar,
+                      }}
+                      formats={{
+                        dayFormat: (date) => {
+                          const dayIndex = date.getDay();
+                          // Use the same dayIndexToName mapping for consistency
+                          const dayName = dayIndexToName[dayIndex];
+                          // Convert to proper display format (capitalize first letter)
+                          return dayName.charAt(0).toUpperCase() + dayName.slice(1);
+                        },
+                      }}
+                      min={new Date(0, 0, 0, 8, 0)} // Start at 8 AM
+                      max={new Date(0, 0, 0, 22, 0)} // End at 10 PM
                     />
                   </div>
                 ) : (
