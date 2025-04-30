@@ -118,7 +118,7 @@ const ExamContent = () => {
     if (currentQuestionIndex < questions.length - 1) {
       // Save progress before moving to the next question
       setIsSaving(true);
-      await saveProgress();
+      // await saveProgress();
       setCurrentQuestion(currentQuestionIndex + 1);
       setIsSaving(false);
     }
