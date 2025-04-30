@@ -111,7 +111,7 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
     });
 
     // Get user pairings
-    let pairings = [];
+    let pairings : any[] = [];
     if (user.type === AccountType.STUDENT) {
       // For students, find matches where they are the student
       const matches = await Match.find({ 
