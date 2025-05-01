@@ -36,6 +36,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
   const [isDisabled, setIsDisabled] = useState(false);
   const [originalForStudents, setOriginalForStudents] = useState(false);
   const [originalForTutors, setOriginalForTutors] = useState(false);
+  const [originalDisabled, setOriginalDisabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,8 +91,10 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
             setOriginalForTutors(examAttributes.data.forTutors);
             if (examAttributes.data.disabled == undefined || examAttributes.data.disabled == null) {
               setIsDisabled(false);
+              setOriginalDisabled(false);
             } else {
               setIsDisabled(examAttributes.data.disabled);
+              setOriginalDisabled(examAttributes.data.disabled);
             }
           }
         }
@@ -142,7 +145,10 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
       setIsSubmitting(true);
       
       // If admin is updating group assignment settings
-      if (isAdmin && (assignToAllStudents || assignToAllTutors)) {
+      if (isAdmin) {
+        if (!(originalForStudents != assignToAllStudents || originalForTutors != assignToAllTutors || originalDisabled != isDisabled))[
+          toast.error("No changes to make"),
+        ]
         toast.loading("Updating exam group assignment settings...");
         const result = await updateExamAttributesAction(
           examId,
@@ -181,7 +187,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
         }
       } else if (!assignToAllStudents && !assignToAllTutors) {
         // If no user is selected and no group assignment is enabled
-        toast.error("Please select a user or enable group assignment");
+        toast.error("No user selected");
       }
     } catch (error) {
       console.error("Error assigning exam:", error);
