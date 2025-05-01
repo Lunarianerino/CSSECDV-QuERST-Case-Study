@@ -1,7 +1,7 @@
 "use server";
 //! Since this is here, consider deleting getExamById
 import { connectToMongoDB } from "../db";
-import { Exam, ExamAnswers, ExamStatus } from "@/models";
+import { Account, Exam, ExamAnswers, ExamStatus } from "@/models";
 import { UserExamStatus } from "@/models/examStatus";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -611,5 +611,72 @@ export async function getExamTypes(): Promise<ExamTypes[]> {
     return [ExamTypes.SUMMATIVE, ExamTypes.FORMATIVE];
   } else {
     return [];
+  }
+}
+
+export async function assignExamsToAll(tutors: boolean, students: boolean, examId: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      throw new Error("Not authenticated");
+    }
+
+    if (session.user.type !== AccountType.ADMIN) {
+      throw new Error("Not authorized");
+    }
+
+    const exam = await Exam.findById(examId);
+    if (!exam) {
+      throw new Error("Exam not found");
+    }
+
+    if (tutors) {
+      const tutors = await Account.find({ type: AccountType.TUTOR });
+      for (const tutor of tutors) {
+        // filter out the ones that already have the exam assigned
+        const existingUserExam = await ExamStatus.findOne({
+          userId: tutor._id,
+          examId: exam._id,
+        });
+
+        if (existingUserExam) {
+          continue;
+        }
+
+        await ExamStatus.create({
+          userId: tutor._id,
+          examId: exam._id,
+          status: UserExamStatus.NOT_STARTED,
+        });
+      }
+    }
+
+    if (students) {
+      const students = await Account.find({ type: AccountType.STUDENT });
+      for (const student of students) {
+        // filter out the ones that already have the exam assigned
+        const existingUserExam = await ExamStatus.findOne({
+          userId: student._id,
+          examId: exam._id,
+        });
+
+        if (existingUserExam) {
+          continue;
+        }
+
+        await ExamStatus.create({
+          userId: student._id,
+          examId: exam._id,
+          status: UserExamStatus.NOT_STARTED,
+        });
+      }
+    }
+    return {
+      success: true,
+      message: "Exams assigned successfully.",
+    }
+  } catch (error) {
+    console.error("Error assigning exams:", error);
+    throw new Error("Failed to assign exams");
   }
 }

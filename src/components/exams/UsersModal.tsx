@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { getTutorsAndStudentsAggregation } from "@/lib/actions/userActions";
-import { assignExamToUserAction } from "@/lib/actions/examActions";
+import { assignExamsToAll, assignExamToUserAction } from "@/lib/actions/examActions";
 import { updateExamAttributesAction } from "@/lib/actions/updateExamAttributesAction";
 import { getExamAttributesAction } from "@/lib/actions/getExamAttributesAction";
 import { Button } from "@/components/ui/button";
@@ -154,6 +154,15 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
           toast.success("Exam group assignment settings updated");
         } else {
           toast.error(result.message || "Failed to update exam settings");
+        }
+
+        if (originalForStudents !== assignToAllStudents || originalForTutors !== assignToAllTutors) {
+          const result = await assignExamsToAll(assignToAllStudents, assignToAllTutors, examId);
+          if (result.success) {
+            toast.success("Exam assigned to all users successfully");
+          } else {
+            toast.error(result.message || "Failed to assign exam to all users");
+          }
         }
       } 
       
