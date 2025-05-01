@@ -33,6 +33,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [assignToAllStudents, setAssignToAllStudents] = useState(false);
   const [assignToAllTutors, setAssignToAllTutors] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(false);
   const [originalForStudents, setOriginalForStudents] = useState(false);
   const [originalForTutors, setOriginalForTutors] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,6 +88,11 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
             setAssignToAllTutors(examAttributes.data.forTutors);
             setOriginalForStudents(examAttributes.data.forStudents);
             setOriginalForTutors(examAttributes.data.forTutors);
+            if (examAttributes.data.disabled == undefined || examAttributes.data.disabled == null) {
+              setIsDisabled(false);
+            } else {
+              setIsDisabled(examAttributes.data.disabled);
+            }
           }
         }
         
@@ -140,7 +146,8 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
         const result = await updateExamAttributesAction(
           examId,
           assignToAllStudents,
-          assignToAllTutors
+          assignToAllTutors,
+          isDisabled
         );
         
         if (result.success) {
@@ -180,6 +187,10 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
 
   const handleTutorsToggle = (checked: boolean) => {
     setAssignToAllTutors(checked);
+  };
+
+  const handleDisableToggle = (checked: boolean) => {
+    setIsDisabled(checked);
   };
 
   return (
@@ -232,6 +243,14 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
                     onCheckedChange={handleTutorsToggle}
                   />
                   <Label htmlFor="assign-tutors">Assign to all tutors</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="disable-exam"
+                    checked={isDisabled}
+                    onCheckedChange={handleDisableToggle}
+                  />
+                  <Label htmlFor="disable-exam">Disable Exam</Label>
                 </div>
               </>
             )}

@@ -12,7 +12,8 @@ import { AccountType } from "@/models/account";
 export async function updateExamAttributesAction(
   examId: string,
   forStudents: boolean,
-  forTutors: boolean
+  forTutors: boolean,
+  isDisabled: boolean,
 ) {
   try {
     await connectToMongoDB();
@@ -36,6 +37,7 @@ export async function updateExamAttributesAction(
     // Update exam attributes
     exam.forStudents = forStudents;
     exam.forTutors = forTutors;
+    exam.disabled = isDisabled;
     // console.log(exam);
     await exam.save();
 
