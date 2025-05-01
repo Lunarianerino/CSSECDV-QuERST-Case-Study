@@ -148,29 +148,29 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
       if (isAdmin) {
         if (!(originalForStudents != assignToAllStudents || originalForTutors != assignToAllTutors || originalDisabled != isDisabled)) {
           toast.error("No changes to make");
-          return;
-        }
-        toast.loading("Updating exam group assignment settings...");
-        const result = await updateExamAttributesAction(
-          examId,
-          assignToAllStudents,
-          assignToAllTutors,
-          isDisabled
-        );
-        
-        if (result.success) {
-          toast.success("Exam group assignment settings updated");
         } else {
-          toast.error(result.message || "Failed to update exam settings");
-        }
-
-        if (assignToAllStudents || assignToAllTutors) {
-          toast.loading("Assigning exam to all tutor and/or student users...");
-          const result = await assignExamsToAll(assignToAllStudents, assignToAllTutors, examId);
+          toast.loading("Updating exam group assignment settings...");
+          const result = await updateExamAttributesAction(
+            examId,
+            assignToAllStudents,
+            assignToAllTutors,
+            isDisabled
+          );
+          
           if (result.success) {
-            toast.success("Exam assigned to all users successfully");
+            toast.success("Exam group assignment settings updated");
           } else {
-            toast.error(result.message || "Failed to assign exam to all users");
+            toast.error(result.message || "Failed to update exam settings");
+          }
+  
+          if (assignToAllStudents || assignToAllTutors) {
+            toast.loading("Assigning exam to all tutor and/or student users...");
+            const result = await assignExamsToAll(assignToAllStudents, assignToAllTutors, examId);
+            if (result.success) {
+              toast.success("Exam assigned to all users successfully");
+            } else {
+              toast.error(result.message || "Failed to assign exam to all users");
+            }
           }
         }
       } 
@@ -186,10 +186,11 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
         } else {
           toast.error(result.message || "Failed to assign exam to user");
         }
-      } else if (!assignToAllStudents && !assignToAllTutors) {
-        // If no user is selected and no group assignment is enabled
-        toast.error("No user selected");
       }
+      //  else if (!assignToAllStudents && !assignToAllTutors) {
+      //   // If no user is selected and no group assignment is enabled
+      //   toast.error("No user selected");
+      // }
     } catch (error) {
       console.error("Error assigning exam:", error);
       toast.error("Failed to assign exam");
