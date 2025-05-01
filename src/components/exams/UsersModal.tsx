@@ -157,7 +157,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
           toast.error(result.message || "Failed to update exam settings");
         }
 
-        if (originalForStudents !== assignToAllStudents || originalForTutors !== assignToAllTutors) {
+        if (assignToAllStudents || assignToAllTutors) {
           toast.loading("Assigning exam to all tutor and/or student users...");
           const result = await assignExamsToAll(assignToAllStudents, assignToAllTutors, examId);
           if (result.success) {
