@@ -86,7 +86,7 @@ export const ProgressPanel: React.FC = () => {
                       ? "bg-primary text-primary-foreground"
                       : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                   )}
-                  // onClick={() => handleQuestionSelect(index)}
+                  onClick={() => handleQuestionSelect(index)}
                 >
                   <span className="mr-3 flex items-center justify-center w-6 h-6 rounded-full bg-background/60 text-xs font-medium">
                     {index + 1}

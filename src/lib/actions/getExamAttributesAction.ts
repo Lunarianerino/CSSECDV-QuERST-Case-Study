@@ -23,6 +23,7 @@ export async function getExamAttributesAction(examId: string) {
       data: {
         forStudents: exam.forStudents,
         forTutors: exam.forTutors,
+        disabled: exam.disabled,
       },
     };
   } catch (error) {
