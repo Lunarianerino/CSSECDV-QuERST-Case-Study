@@ -20,6 +20,7 @@ export interface IExam extends Document {
   forStudents: boolean;
   forTutors: boolean;
   type: ExamTypes;
+  disabled: boolean;
 }
 
 export const ExamSchema: Schema = new Schema(
@@ -33,6 +34,7 @@ export const ExamSchema: Schema = new Schema(
     forStudents: { type: Boolean, required: true, default: false },
     forTutors: { type: Boolean, required: true, default: false },
     type: { type: String, enum: ExamTypes, required: true, default: ExamTypes.OTHERS },
+    disabled: { type: Boolean, required: true, default: false },
   },
   {
     timestamps: true,

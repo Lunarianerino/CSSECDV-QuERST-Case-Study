@@ -18,6 +18,7 @@ export interface AssignedExam {
   results?: string;
   attemptNumber?: number;
   type: string;
+  disabled: boolean;
 }
 
 export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
@@ -34,13 +35,16 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
       path: "examId",
       model: "Exam",
     });
+
+    const filteredExams = assignedExams.filter(e => e.examId.disabled === false || e.examId.disabled === undefined || e.examId.disabled === null);
     // Transform the data to a client-friendly format
-    return assignedExams.map((examStatus: any) => {
+    return filteredExams.map((examStatus: any) => {
       // Determine results status
       let results = "Not Graded";
       if (examStatus.status === UserExamStatus.FINISHED && examStatus.score !== undefined) {
         results = "Graded";
       }
+
       // console.log(examStatus.examId.type)
       return {
         id: examStatus._id.toString(),
@@ -54,6 +58,7 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
         results: results,
         attemptNumber: examStatus.attemptNumber ? examStatus.attemptNumber : 1,
         type: examStatus.examId.type ? examStatus.examId.type : ExamTypes.OTHERS,
+        disabled: examStatus.examId.disabled? examStatus.examId.disabled : false,
       };
     });
   } catch (error) {
