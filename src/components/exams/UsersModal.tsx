@@ -143,6 +143,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
       
       // If admin is updating group assignment settings
       if (isAdmin && (assignToAllStudents || assignToAllTutors)) {
+        toast.loading("Updating exam group assignment settings...");
         const result = await updateExamAttributesAction(
           examId,
           assignToAllStudents,
@@ -157,6 +158,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
         }
 
         if (originalForStudents !== assignToAllStudents || originalForTutors !== assignToAllTutors) {
+          toast.loading("Assigning exam to all tutor and/or student users...");
           const result = await assignExamsToAll(assignToAllStudents, assignToAllTutors, examId);
           if (result.success) {
             toast.success("Exam assigned to all users successfully");
@@ -168,6 +170,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
       
       // If a specific user is selected, assign to that user
       if (selectedUserId) {
+        toast.loading("Assigning exam to user...");
         const result = await assignExamToUserAction(examId, selectedUserId);
         
         if (result.success) {
