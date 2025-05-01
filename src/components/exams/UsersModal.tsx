@@ -146,9 +146,10 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
       
       // If admin is updating group assignment settings
       if (isAdmin) {
-        if (!(originalForStudents != assignToAllStudents || originalForTutors != assignToAllTutors || originalDisabled != isDisabled))[
-          toast.error("No changes to make"),
-        ]
+        if (!(originalForStudents != assignToAllStudents || originalForTutors != assignToAllTutors || originalDisabled != isDisabled)) {
+          toast.error("No changes to make");
+          return;
+        }
         toast.loading("Updating exam group assignment settings...");
         const result = await updateExamAttributesAction(
           examId,
