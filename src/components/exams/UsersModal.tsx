@@ -165,7 +165,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
   
           if (assignToAllStudents || assignToAllTutors) {
             toast.loading("Assigning exam to all tutor and/or student users...");
-            const result = await assignExamsToAll(assignToAllStudents, assignToAllTutors, examId);
+            const result = await assignExamsToAll(assignToAllTutors, assignToAllStudents, examId);
             if (result.success) {
               toast.success("Exam assigned to all users successfully");
             } else {
