@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Trash, Loader2 } from "lucide-react";
+import { Plus, Trash, Loader2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -25,6 +25,8 @@ import { createExam } from "@/lib/server/actions/exam";
 import { ExamTypes } from "@/models/exam";
 import { getExamTypes } from "@/lib/actions/examActions";
 import { Switch } from "@/components/ui/switch";
+import { Markdown, MarkdownPreview } from "@/components/ui/markdown";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // Define types for the form
 
 // Define schemas for validation
@@ -236,13 +238,29 @@ const CreateExam = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter exam description"
-                          className="min-h-[100px]"
-                          {...field}
-                        />
-                      </FormControl>
+                      <FormDescription>
+                        Supports markdown formatting for rich text
+                      </FormDescription>
+                      <Tabs defaultValue="edit" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="edit">Edit</TabsTrigger>
+                          <TabsTrigger value="preview">Preview</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="edit">
+                          <FormControl>
+                            <Textarea
+                              placeholder="Enter exam description"
+                              className="min-h-[100px] font-mono"
+                              {...field}
+                            />
+                          </FormControl>
+                        </TabsContent>
+                        <TabsContent value="preview">
+                          <div className="border rounded-md p-3 min-h-[100px]">
+                            <Markdown content={field.value} />
+                          </div>
+                        </TabsContent>
+                      </Tabs>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -339,15 +357,31 @@ const CreateExam = () => {
               <CardContent className="space-y-6">
                 {/* Add new question */}
                 <div className="space-y-4 p-4 border rounded-md">
-                  <div>
+                  <div className="space-y-2">
                     <FormLabel htmlFor="question">Question Text</FormLabel>
-                    <Textarea
-                      id="question"
-                      value={currentQuestion}
-                      onChange={(e) => setCurrentQuestion(e.target.value)}
-                      placeholder="Enter question text"
-                      className="min-h-[60px]"
-                    />
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Supports markdown for formatting, tables, lists, and more
+                    </div>
+                    <Tabs defaultValue="edit" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="edit">Edit</TabsTrigger>
+                        <TabsTrigger value="preview">Preview</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="edit">
+                        <Textarea
+                          id="question"
+                          value={currentQuestion}
+                          onChange={(e) => setCurrentQuestion(e.target.value)}
+                          placeholder="Enter question"
+                          className="min-h-[100px] font-mono"
+                        />
+                      </TabsContent>
+                      <TabsContent value="preview">
+                        <div className="border rounded-md p-3 min-h-[100px]">
+                          <Markdown content={currentQuestion} />
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </div>
 
                   <div>
@@ -396,17 +430,32 @@ const CreateExam = () => {
 
                       {choices.map((choice) => (
                         <div key={choice.id} className="flex items-center space-x-2">
-                          <Input
-                            value={choice.text}
-                            onChange={(e) => {
-                              setChoices(
-                                choices.map(c =>
-                                  c.id === choice.id ? { ...c, text: e.target.value } : c
-                                )
-                              );
-                            }}
-                            className="flex-1"
-                          />
+                          <div className="flex-1">
+                            <Tabs defaultValue="edit" className="w-full">
+                              <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="edit">Edit</TabsTrigger>
+                                <TabsTrigger value="preview">Preview</TabsTrigger>
+                              </TabsList>
+                              <TabsContent value="edit">
+                                <Input
+                                  value={choice.text}
+                                  onChange={(e) => {
+                                    setChoices(
+                                      choices.map(c =>
+                                        c.id === choice.id ? { ...c, text: e.target.value } : c
+                                      )
+                                    );
+                                  }}
+                                  className="w-full"
+                                />
+                              </TabsContent>
+                              <TabsContent value="preview">
+                                <div className="border rounded-md p-2 min-h-[36px]">
+                                  <Markdown content={choice.text} />
+                                </div>
+                              </TabsContent>
+                            </Tabs>
+                          </div>
                           <Select
                             value={choice.isCorrect ? "correct" : "incorrect"}
                             onValueChange={(value) => toggleCorrect(choice.id)}
@@ -431,22 +480,37 @@ const CreateExam = () => {
                         </div>
                       ))}
 
-                      <div className="flex space-x-2">
-                        <Input
-                          value={currentChoice}
-                          onChange={(e) => setCurrentChoice(e.target.value)}
-                          placeholder="Add a choice"
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          onClick={addChoice}
-                          variant="outline"
-                          disabled={!currentChoice.trim() || isLoading || isSaving}
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Choice
-                        </Button>
+                      <div className="space-y-2">
+                        <Tabs defaultValue="edit" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="edit">Edit</TabsTrigger>
+                            <TabsTrigger value="preview">Preview</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="edit">
+                            <div className="flex space-x-2">
+                              <Input
+                                value={currentChoice}
+                                onChange={(e) => setCurrentChoice(e.target.value)}
+                                placeholder="Add a choice"
+                                className="flex-1"
+                              />
+                              <Button
+                                type="button"
+                                onClick={addChoice}
+                                variant="outline"
+                                disabled={!currentChoice.trim() || isLoading || isSaving}
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Choice
+                              </Button>
+                            </div>
+                          </TabsContent>
+                          <TabsContent value="preview">
+                            <div className="border rounded-md p-3 min-h-[40px]">
+                              <Markdown content={currentChoice} />
+                            </div>
+                          </TabsContent>
+                        </Tabs>
                       </div>
                     </div>
                   )}
@@ -487,7 +551,9 @@ const CreateExam = () => {
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="font-medium">Question {index + 1}</p>
-                            <p>{question.question}</p>
+                            <div className="mt-1">
+                              <Markdown content={question.question} />
+                            </div>
                           </div>
                           <Button
                             type="button"
@@ -508,7 +574,10 @@ const CreateExam = () => {
                               <ul className="pl-5 list-disc text-sm">
                                 {question.choices.map((choice, choiceIndex) => (
                                   <li key={choiceIndex} className={choice.isCorrect ? "text-green-600 font-medium" : ""}>
-                                    {choice.text} {choice.isCorrect && "(Correct)"}
+                                    <span className="inline-block">
+                                      <Markdown content={choice.text} />
+                                    </span>
+                                    {choice.isCorrect && " (Correct)"}
                                   </li>
                                 ))}
                               </ul>

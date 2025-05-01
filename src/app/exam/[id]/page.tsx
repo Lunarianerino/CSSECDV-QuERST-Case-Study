@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { redirect, useParams } from "next/navigation";
 import { getExamByAttempt, setStartedExamStatusAction } from "@/lib/actions/examActions";
 import { Loader2 } from "lucide-react";
+import { Markdown } from "@/components/ui/markdown";
 
 //TODO: FIX in the future (add toast)
 const ExamContent = () => {
@@ -164,7 +165,9 @@ const ExamContent = () => {
           <header className="mb-8">
             <h1 className="text-3xl font-medium tracking-tight mb-2">{examName}</h1>
             <p className="text-muted-foreground">Answer all {questions.length} questions and submit your exam.</p>
-            <p className="text-muted-foreground">{examDescription}</p>
+            <div className="text-muted-foreground mt-2">
+              <Markdown content={examDescription} />
+            </div>
           </header>
 
           <QuestionCard
