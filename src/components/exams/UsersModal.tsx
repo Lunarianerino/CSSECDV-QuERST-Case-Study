@@ -149,7 +149,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
         if (!(originalForStudents != assignToAllStudents || originalForTutors != assignToAllTutors || originalDisabled != isDisabled)) {
           toast.error("No changes to make");
         } else {
-          toast.loading("Updating exam group assignment settings...");
+          toast.loading("Updating exam group assignment settings...", {id: "updating"});
           const result = await updateExamAttributesAction(
             examId,
             assignToAllStudents,
@@ -158,18 +158,18 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
           );
           
           if (result.success) {
-            toast.success("Exam group assignment settings updated");
+            toast.success("Exam group assignment settings updated", {id: "updating"});
           } else {
-            toast.error(result.message || "Failed to update exam settings");
+            toast.error(result.message || "Failed to update exam settings", {id: "updating"});
           }
   
           if (assignToAllStudents || assignToAllTutors) {
-            toast.loading("Assigning exam to all tutor and/or student users...");
+            toast.loading("Assigning exam to all tutor and/or student users...", {id: "assigning"});
             const result = await assignExamsToAll(assignToAllTutors, assignToAllStudents, examId);
             if (result.success) {
-              toast.success("Exam assigned to all users successfully");
+              toast.success("Exam assigned to all users successfully", {id: "assigning"});
             } else {
-              toast.error(result.message || "Failed to assign exam to all users");
+              toast.error(result.message || "Failed to assign exam to all users", {id: "assigning"});
             }
           }
         }
@@ -177,14 +177,14 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
       
       // If a specific user is selected, assign to that user
       if (selectedUserId) {
-        toast.loading("Assigning exam to user...");
+        toast.loading("Assigning exam to user...", {id: "assigning-user"});
         const result = await assignExamToUserAction(examId, selectedUserId);
         
         if (result.success) {
-          toast.success("Exam assigned to user successfully");
+          toast.success("Exam assigned to user successfully", {id: "assigning-user"});
           setSelectedUserId(""); // Reset selection
         } else {
-          toast.error(result.message || "Failed to assign exam to user");
+          toast.error(result.message || "Failed to assign exam to user", {id: "assigning-user"});
         }
       }
       //  else if (!assignToAllStudents && !assignToAllTutors) {
