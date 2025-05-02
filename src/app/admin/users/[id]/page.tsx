@@ -55,6 +55,8 @@ const UserProfilePage = () => {
           const events = convertScheduleToEvents(data.schedule);
           setCalendarEvents(events);
         }
+
+        // console.log(profile.exams)
       } catch (err: any) {
         setError(err.message || "Failed to load user profile");
       } finally {
@@ -280,6 +282,77 @@ const UserProfilePage = () => {
                   <div className="text-center py-8 text-muted-foreground">
                     No schedule available for this user.
                   </div>
+                )}
+                
+                {/* Assigned Users List */}
+                {calendarEvents.length > 0 && (
+                  <>
+                    {/* Filter assigned events for the list view */}
+                    {(() => {
+                      // Filter events that are assigned
+                      let assignedEvents = calendarEvents.filter(event => event.resource.type === "assigned");
+                      
+                      // Sort events to show Sunday sessions first
+                      assignedEvents = assignedEvents.sort((a, b) => {
+                        // Check if event a is on Sunday
+                        const aIsSunday = a.resource.day === "sunday";
+                        // Check if event b is on Sunday
+                        const bIsSunday = b.resource.day === "sunday";
+                        
+                        // If a is Sunday and b is not, a comes first
+                        if (aIsSunday && !bIsSunday) return -1;
+                        // If b is Sunday and a is not, b comes first
+                        if (!aIsSunday && bIsSunday) return 1;
+                        // Otherwise maintain original order
+                        return 0;
+                      });
+                      
+                      if (assignedEvents.length > 0) {
+                        // Format date for display
+                        const formatDate = (date: Date): string => {
+                          return date.toLocaleDateString('en-US', { weekday: 'long'});
+                        };
+                        
+                        // Format time for display
+                        const formatTimeDisplay = (date: Date): string => {
+                          return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                        };
+                        
+                        return (
+                          <div className="mt-6 border rounded-md p-4">
+                            <h3 className="text-md font-medium mb-3">Reserved Time Slots</h3>
+                            <div className="space-y-2">
+                              {assignedEvents.map((event) => {
+                                const assignedTo = event.resource.assignment && 
+                                  typeof event.resource.assignment === 'object' && 
+                                  'name' in event.resource.assignment ? 
+                                  (event.resource.assignment as any).name : 
+                                  "Someone";
+                                
+                                return (
+                                  <div 
+                                    key={event.id} 
+                                    className="flex justify-between items-center p-2 bg-muted/30 rounded hover:bg-muted/50"
+                                  >
+                                    <div>
+                                      <div className="font-medium">{formatDate(event.start)}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {formatTimeDisplay(event.start)} - {formatTimeDisplay(event.end)}
+                                      </div>
+                                    </div>
+                                    <div className="text-sm">
+                                      Session with <span className="font-medium">{assignedTo}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </>
                 )}
               </CardContent>
             </Card>
