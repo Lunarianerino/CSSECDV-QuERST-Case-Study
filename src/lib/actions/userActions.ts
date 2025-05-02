@@ -4,6 +4,7 @@ import { Account } from "@/models";
 import { AccountType } from "@/models/account";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { BasicAccountInfo } from "@/types/accounts";
 
 
 /**
@@ -84,5 +85,33 @@ export async function getUserTypeById(userId: string): Promise<AccountType | nul
   } catch (error) {
     console.error("Error fetching user type:", error);
     throw new Error("Failed to fetch user type"); 
+  }
+}
+
+export async function getAllUsers() : Promise<BasicAccountInfo[]>{
+  try {
+    // Check if user is authorized (admin only)
+    const session = await getServerSession(authOptions);
+    if (!session || session.user?.type!== AccountType.ADMIN) {
+      throw new Error("Not authorized to access user data");
+    }
+
+    await connectToMongoDB();
+    const users = await Account.find({});
+    const formattedUsers : BasicAccountInfo[] = users.map((user) => {
+      return {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        type: user.type,
+        onboarded: user.onboarded
+      }
+    })
+
+    return formattedUsers;
+
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    throw new Error("Failed to fetch users");
   }
 }
