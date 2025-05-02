@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { UserExamStatus } from "@/models/examStatus";
 import { MatchStatus } from "@/models/match";
+import DashboardLayout from "@/components/dashboard-layout";
 
 const localizer = momentLocalizer(moment);
 
@@ -191,17 +192,17 @@ const UserProfilePage = () => {
   };
 
   return (
+    <DashboardLayout title="User Profile">
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* User Details Card */}
         <Card>
           <CardHeader>
-            <CardTitle>User Profile</CardTitle>
+            <CardTitle>Basic Information</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h3 className="text-lg font-medium">Basic Information</h3>
                 <div className="mt-2 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Name:</span>
@@ -448,6 +449,7 @@ const UserProfilePage = () => {
         </Tabs>
       </div>
     </div>
+    </DashboardLayout>
   );
 };
 
