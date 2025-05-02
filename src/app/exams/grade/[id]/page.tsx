@@ -60,7 +60,7 @@ export default function GradeExamPage() {
         setLoading(true);
         const attemptId = params.id as string;
         const data = await getExamByAttempt(attemptId);
-
+        console.log(data)
         if (!data) {
           toast.error("Failed to load exam submission");
           return;

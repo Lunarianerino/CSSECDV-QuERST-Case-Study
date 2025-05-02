@@ -61,7 +61,7 @@ const CommonAvailableTimes = ({ studentId, tutorId, onSelectTimes }: CommonAvail
         }
 
         if (!response.data || Object.keys(response.data).length < 2) {
-          setError("One or both users don't have schedules set up");
+          // setError("One or both users don't have schedules set up");
           return;
         }
 
@@ -152,16 +152,16 @@ const CommonAvailableTimes = ({ studentId, tutorId, onSelectTimes }: CommonAvail
   // Check if there are any common times
   const hasCommonTimes = Object.values(commonTimes).some(times => times.length > 0);
 
-  if (!hasCommonTimes) {
-    return (
-      <div className="text-center py-4 text-amber-600">
-        <p>No common available times found between these users.</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Both users need to set up their schedules with available time slots.
-        </p>
-      </div>
-    );
-  }
+  // if (!hasCommonTimes) {
+  //   return (
+  //     <div className="text-center py-4 text-amber-600">
+  //       <p>No common available times found between these users.</p>
+  //       <p className="text-sm text-muted-foreground mt-2">
+  //         Both users need to set up their schedules with available time slots.
+  //       </p>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="space-y-4">
