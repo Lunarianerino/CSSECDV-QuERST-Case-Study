@@ -21,10 +21,14 @@ export const createExam = async (values: ExamFormValues) => {
     await connectToMongoDB()
 
     // Build the exam down to top
+    let maxScore = 0;
     const question_ids = await Promise.all(values.questions.map(async (question) => {
+      maxScore += question.points ? question.points : 0;
+
       const newQuestion = new Question({
         question: question.question,
         type: question.type,
+        points: question.points? question.points : 0,
       });
 
       if (question.type === "choice" || question.type === "multiple_choice") {
@@ -53,7 +57,6 @@ export const createExam = async (values: ExamFormValues) => {
       // console.log(question_result);
       return question_result._id;
     }));
-
     const exam = new Exam({
       name: values.name,
       description: values.description,
@@ -62,6 +65,7 @@ export const createExam = async (values: ExamFormValues) => {
       graded: values.graded,
       createdBy: session.user.id,
       type: values.type,
+      maxScore: maxScore,
     });
 
     const exam_result = await exam.save();

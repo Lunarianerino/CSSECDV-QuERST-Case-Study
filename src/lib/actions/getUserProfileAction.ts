@@ -94,7 +94,7 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
       if (examStatus.status === UserExamStatus.FINISHED && examStatus.score !== undefined) {
         results = "Graded";
       }
-
+      // console.log(examStatus.score);
       return {
         id: examStatus._id.toString(),
         examId: examStatus.examId._id.toString(),
@@ -102,7 +102,7 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
         description: examStatus.examId.description,
         status: examStatus.status,
         score: examStatus.score,
-        maxScore: examStatus.maxScore,
+        maxScore: examStatus.examId.maxScore,
         completedAt: examStatus.completedAt ? examStatus.completedAt : undefined,
         results,
         attemptNumber: examStatus.attemptNumber || 1,
@@ -127,7 +127,7 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
         subject: match.subject,
         createdAt: new Date(match.createdAt).toLocaleDateString(),
       }));
-      console.log(pairings); // Add this line to check the match data
+      // console.log(pairings); // Add this line to check the match data
 
     } else if (user.type === AccountType.TUTOR) {
       // For tutors, find matches where they are the tutor
