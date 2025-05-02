@@ -87,6 +87,10 @@ const getNavigationData = (userType: string | undefined) => {
         {
           title: "Create Exam",
           url: "/exams/create",
+        },        
+        {
+          title: "Submissions",
+          url: "/exams/submissions",
         },
         {
           title: "VARK",
