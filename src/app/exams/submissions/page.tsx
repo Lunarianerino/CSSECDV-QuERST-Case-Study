@@ -65,7 +65,7 @@ export default function ExamSubmissionsPage() {
       <div className="min-h-screen bg-background p-6 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-lg font-medium">Loading exam creation form...</p>
+          <p className="text-lg font-medium">Loading submissions...</p>
         </div>
       </div>
     )
