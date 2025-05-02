@@ -22,6 +22,7 @@ import { registerSchema, RegisterFormValues } from "@/lib/validations/auth";
 export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const form = useForm<RegisterFormValues>({
@@ -44,6 +45,8 @@ export default function RegisterForm() {
       toast.error("Passwords do not match");
       return; 
     }
+
+    setIsLoading(true);
     toast.loading("Signing you up...", {id: "register"});
     try {
       const r = await register({
@@ -150,7 +153,7 @@ export default function RegisterForm() {
           )}
         />
 
-        <Button type="submit" className="w-full">
+        <Button type="submit" className="w-full" disabled={isLoading}>
           Register
         </Button>
       </form>

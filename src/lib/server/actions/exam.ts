@@ -5,6 +5,8 @@ import { Exam, Question, Choice } from "@/models"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth";
 import { AccountType } from "@/models/account";
+// Note: No database schema changes needed as the existing text fields
+// can store markdown content without modification
 export const createExam = async (values: ExamFormValues) => {
   try {
     const session = await getServerSession(authOptions);

@@ -97,14 +97,13 @@ const ExamsList = () => {
           <UsersModal
             examId={exam.id}
             onClose={() => {
-              const dialogClose = document.querySelector('[data-radix-dialog-close]') as HTMLButtonElement;
-              dialogClose?.click();
+              setIsAssignOpen(false);
             }}
           />
           <DialogFooter className="sm:justify-start">
-            <Button variant="outline" type="button" onClick={() => { setIsAssignOpen(false) }}>
+            {/* <Button variant="outline" type="button" onClick={() => { setIsAssignOpen(false) }}>
               Cancel
-            </Button>
+            </Button> */}
           </DialogFooter>
         </DialogContent>
       </Dialog>

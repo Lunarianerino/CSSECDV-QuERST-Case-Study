@@ -4,6 +4,7 @@ import { Check, Square, CheckSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExam } from "@/context/ExamContext";
 import { Textarea } from "@/components/ui/textarea";
+import { Markdown } from "@/components/ui/markdown";
 
 interface QuestionCardProps {
   questionId: string;
@@ -56,11 +57,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   return (
     <Card className="w-full mb-6 border border-border/50 overflow-hidden shadow-sm animate-slide-in" style={{ animationDelay: `${questionNumber * 50}ms` }}>
       <CardHeader className="pb-3 pt-6">
-        <CardTitle className="text-xl font-medium flex items-center gap-3">
-          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-secondary text-foreground text-sm">
+        <CardTitle className="text-xl font-medium flex items-start gap-3">
+          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-secondary text-foreground text-sm mt-1">
             {questionNumber}
           </span>
-          <span>{questionText}</span>
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <Markdown content={questionText} />
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="pb-6">
@@ -124,7 +127,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                         <Square className="h-4 w-4 text-muted-foreground" />}
                     </div>
                   )}
-                  <span className="text-foreground">{choice.text}</span>
+                  <span className="text-foreground prose prose-sm dark:prose-invert max-w-none">
+                    <Markdown content={choice.text} />
+                  </span>
                 </div>
               );
             })}

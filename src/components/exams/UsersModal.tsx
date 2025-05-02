@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { getTutorsAndStudentsAggregation } from "@/lib/actions/userActions";
-import { assignExamToUserAction } from "@/lib/actions/examActions";
+import { assignExamsToAll, assignExamToUserAction } from "@/lib/actions/examActions";
 import { updateExamAttributesAction } from "@/lib/actions/updateExamAttributesAction";
 import { getExamAttributesAction } from "@/lib/actions/getExamAttributesAction";
 import { Button } from "@/components/ui/button";
@@ -33,8 +33,10 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [assignToAllStudents, setAssignToAllStudents] = useState(false);
   const [assignToAllTutors, setAssignToAllTutors] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(false);
   const [originalForStudents, setOriginalForStudents] = useState(false);
   const [originalForTutors, setOriginalForTutors] = useState(false);
+  const [originalDisabled, setOriginalDisabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +89,13 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
             setAssignToAllTutors(examAttributes.data.forTutors);
             setOriginalForStudents(examAttributes.data.forStudents);
             setOriginalForTutors(examAttributes.data.forTutors);
+            if (examAttributes.data.disabled == undefined || examAttributes.data.disabled == null) {
+              setIsDisabled(false);
+              setOriginalDisabled(false);
+            } else {
+              setIsDisabled(examAttributes.data.disabled);
+              setOriginalDisabled(examAttributes.data.disabled);
+            }
           }
         }
         
@@ -136,34 +145,52 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
       setIsSubmitting(true);
       
       // If admin is updating group assignment settings
-      if (isAdmin && (assignToAllStudents || assignToAllTutors)) {
-        const result = await updateExamAttributesAction(
-          examId,
-          assignToAllStudents,
-          assignToAllTutors
-        );
-        
-        if (result.success) {
-          toast.success("Exam group assignment settings updated");
+      if (isAdmin) {
+        if (!(originalForStudents != assignToAllStudents || originalForTutors != assignToAllTutors || originalDisabled != isDisabled)) {
+          toast.error("No changes to make");
         } else {
-          toast.error(result.message || "Failed to update exam settings");
+          toast.loading("Updating exam group assignment settings...", {id: "updating"});
+          const result = await updateExamAttributesAction(
+            examId,
+            assignToAllStudents,
+            assignToAllTutors,
+            isDisabled
+          );
+          
+          if (result.success) {
+            toast.success("Exam group assignment settings updated", {id: "updating"});
+          } else {
+            toast.error(result.message || "Failed to update exam settings", {id: "updating"});
+          }
+  
+          if (assignToAllStudents || assignToAllTutors) {
+            toast.loading("Assigning exam to all tutor and/or student users...", {id: "assigning"});
+            const result = await assignExamsToAll(assignToAllTutors, assignToAllStudents, examId);
+            if (result.success) {
+              toast.success("Exam assigned to all users successfully", {id: "assigning"});
+            } else {
+              toast.error(result.message || "Failed to assign exam to all users", {id: "assigning"});
+            }
+          }
         }
       } 
       
       // If a specific user is selected, assign to that user
       if (selectedUserId) {
+        toast.loading("Assigning exam to user...", {id: "assigning-user"});
         const result = await assignExamToUserAction(examId, selectedUserId);
         
         if (result.success) {
-          toast.success("Exam assigned to user successfully");
+          toast.success("Exam assigned to user successfully", {id: "assigning-user"});
           setSelectedUserId(""); // Reset selection
         } else {
-          toast.error(result.message || "Failed to assign exam to user");
+          toast.error(result.message || "Failed to assign exam to user", {id: "assigning-user"});
         }
-      } else if (!assignToAllStudents && !assignToAllTutors) {
-        // If no user is selected and no group assignment is enabled
-        toast.error("Please select a user or enable group assignment");
       }
+      //  else if (!assignToAllStudents && !assignToAllTutors) {
+      //   // If no user is selected and no group assignment is enabled
+      //   toast.error("No user selected");
+      // }
     } catch (error) {
       console.error("Error assigning exam:", error);
       toast.error("Failed to assign exam");
@@ -180,6 +207,10 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
 
   const handleTutorsToggle = (checked: boolean) => {
     setAssignToAllTutors(checked);
+  };
+
+  const handleDisableToggle = (checked: boolean) => {
+    setIsDisabled(checked);
   };
 
   return (
@@ -232,6 +263,14 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
                     onCheckedChange={handleTutorsToggle}
                   />
                   <Label htmlFor="assign-tutors">Assign to all tutors</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="disable-exam"
+                    checked={isDisabled}
+                    onCheckedChange={handleDisableToggle}
+                  />
+                  <Label htmlFor="disable-exam">Disable Exam</Label>
                 </div>
               </>
             )}

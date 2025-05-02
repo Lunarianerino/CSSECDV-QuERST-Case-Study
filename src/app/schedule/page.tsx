@@ -16,7 +16,7 @@ const SchedulePage = () => {
         </div>
 
         <p className="text-muted-foreground mb-4">
-          Configure when you're available to teach during the week. Students will only be able to book sessions during these times.
+          Configure your availability for each day of the week to help us match you with the appropriate tutor/student.
         </p>
 
         <ScheduleSelector/>

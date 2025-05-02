@@ -22,6 +22,7 @@ import { loginSchema, LoginFormValues } from "@/lib/validations/auth";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const form = useForm<LoginFormValues>({
@@ -33,6 +34,7 @@ export default function LoginForm() {
   });
 
   async function onSubmit(data: LoginFormValues) {
+    setIsLoading(true);
     toast.loading("Logging in...", {
       id: "login",
     });
@@ -46,13 +48,13 @@ export default function LoginForm() {
       toast.error(res.error, {
         id: "login",
       });  
+      setIsLoading(false);
     }
     if (res?.ok) {
       toast.success("Logged in successfully", {
         id: "login",
       }); 
 
-      //TODO: add middleware to check if user is verified/onboarded
       router.push("/dashboard");
     }
   }
@@ -103,7 +105,7 @@ export default function LoginForm() {
         )}
       />
 
-      <Button type="submit" className="w-full">
+      <Button type="submit" className="w-full" disabled={isLoading}>
         Log in
       </Button>
     </form>
