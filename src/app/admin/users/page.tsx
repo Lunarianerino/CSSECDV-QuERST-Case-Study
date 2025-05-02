@@ -9,13 +9,14 @@ import { getAllUsers } from "@/lib/actions/userActions";
 import { BasicAccountInfo } from "@/types/accounts";
 import { Search, Eye, Loader2 } from "lucide-react";
 import Link from "next/link";
+import DashboardLayout from "@/components/dashboard-layout";
 
 const Page = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<BasicAccountInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [accountTypeFilter, setAccountTypeFilter] = useState<string>("all");
-  
+
   useEffect(() => {
     setIsLoading(true);
     const fetchUsers = async () => {
@@ -29,16 +30,16 @@ const Page = () => {
   // Filter users based on search query and account type
   const filteredUsers = users.filter(user => {
     // Filter by search query (name or email)
-    const matchesSearch = 
-      searchQuery === "" || 
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch =
+      searchQuery === "" ||
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     // Filter by account type
-    const matchesType = 
-      accountTypeFilter === "all" || 
+    const matchesType =
+      accountTypeFilter === "all" ||
       user.type.toLowerCase() === accountTypeFilter.toLowerCase();
-    
+
     return matchesSearch && matchesType;
   });
 
@@ -53,109 +54,110 @@ const Page = () => {
     );
   }
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+    <DashboardLayout title="User Management">
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* <div className="flex items-center justify-between">
           <h1 className="text-3xl font-semibold tracking-tight">User Management</h1>
-        </div>
+        </div> */}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>All Users</CardTitle>
-            <CardDescription>
-              Manage all users in the system. Search by name or email, and filter by account type.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between mb-6 gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or email..."
-                  className="pl-8"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+          <Card>
+            <CardHeader>
+              <CardTitle>All Users</CardTitle>
+              <CardDescription>
+                Manage all users in the system. Search by name or email, and filter by account type.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-6 gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name or email..."
+                    className="pl-8"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Select
+                  value={accountTypeFilter}
+                  onValueChange={setAccountTypeFilter}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="tutor">Tutor</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Select
-                value={accountTypeFilter}
-                onValueChange={setAccountTypeFilter}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="student">Student</SelectItem>
-                  <SelectItem value="tutor">Tutor</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
-            {
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Account Type</TableHead>
-                      <TableHead>Onboarded</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.length === 0 ? (
+              {
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-6">
-                          No users found matching your criteria
-                        </TableCell>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Account Type</TableHead>
+                        <TableHead>Onboarded</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ) : (
-                      filteredUsers.map((user) => (
-                        <TableRow key={user.email}>
-                          <TableCell className="font-medium">{user.name}</TableCell>
-                          <TableCell>{user.email}</TableCell>
-                          <TableCell>
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              user.type === "admin" ? "bg-purple-100 text-purple-800" :
-                              user.type === "tutor" ? "bg-blue-100 text-blue-800" :
-                              "bg-green-100 text-green-800"
-                            }`}>
-                              {user.type.charAt(0).toUpperCase() + user.type.slice(1)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {user.onboarded ? (
-                              <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                                Yes
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-                                No
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm" asChild>
-                              <Link href={`/admin/users/${user.id}`}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Profile
-                              </Link>
-                            </Button>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredUsers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-6">
+                            No users found matching your criteria
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            }
-          </CardContent>
-        </Card>
+                      ) : (
+                        filteredUsers.map((user) => (
+                          <TableRow key={user.email}>
+                            <TableCell className="font-medium">{user.name}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${user.type === "admin" ? "bg-purple-100 text-purple-800" :
+                                  user.type === "tutor" ? "bg-blue-100 text-blue-800" :
+                                    "bg-green-100 text-green-800"
+                                }`}>
+                                {user.type.charAt(0).toUpperCase() + user.type.slice(1)}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {user.onboarded ? (
+                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                  Yes
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                                  No
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="outline" size="sm" asChild>
+                                <Link href={`/admin/users/${user.id}`}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Profile
+                                </Link>
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              }
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 };
 
