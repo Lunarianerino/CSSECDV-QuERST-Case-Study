@@ -9,6 +9,7 @@ import { QuestionSchema, IQuestion } from "./question";
 import { ScheduleSchema, ISchedule } from "./schedule";
 import { VarkSchema, IVark } from "./vark";
 import { BfiSchema, IBfi } from "./bfi";
+import { SpecialExamSchema, ISpecialExam } from "./specialExam";
 
 // Initialize all models in one place to prevent duplicate model errors
 export const Account = mongoose.models?.Account || mongoose.model<IAccount>("Account", AccountSchema);
@@ -21,6 +22,7 @@ export const Question = mongoose.models?.Question || mongoose.model<IQuestion>("
 export const Schedule = mongoose.models?.Schedule || mongoose.model<ISchedule>("Schedule", ScheduleSchema);
 export const Vark = mongoose.models?.Vark || mongoose.model<IVark>("Vark", VarkSchema);
 export const Bfi = mongoose.models?.Bfi || mongoose.model<IBfi>("Bfi", BfiSchema);
+export const SpecialExam = mongoose.models?.SpecialExam || mongoose.model<ISpecialExam>("SpecialExam", SpecialExamSchema);
 // Export all models
 export default {
   Account,
@@ -32,5 +34,6 @@ export default {
   Question,
   Schedule,
   Vark,
-  Bfi
+  Bfi,
+  SpecialExam,
 };

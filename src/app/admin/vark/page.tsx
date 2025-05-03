@@ -10,11 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { VARKAttributes } from "@/models/vark";
 import { getExamsForVarkAction, getExamDetailsForVarkAction, saveVarkMappingsAction } from "@/lib/actions/varkActions";
-
+import { Loader2 } from "lucide-react";
 interface Exam {
   id: string;
   name: string;
   description: string;
+  selected: boolean;
 }
 
 interface Choice {
@@ -54,6 +55,12 @@ const Page = () => {
         const response = await getExamsForVarkAction();
         if (response.success && response.data) {
           setExams(response.data);
+
+          // Check if there's an exam already selected, where selected is true
+          const selectedExam = response.data.find(exam => exam.selected);
+          if (selectedExam) {
+            handleExamSelect(selectedExam.id);
+          }
         } else {
           toast.error(response.message || "Failed to fetch exams");
         }
@@ -176,7 +183,8 @@ const Page = () => {
 
         {loading && (
           <div className="flex items-center justify-center p-8">
-            <p>Loading...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading VARK mappings...</span>
           </div>
         )}
 
