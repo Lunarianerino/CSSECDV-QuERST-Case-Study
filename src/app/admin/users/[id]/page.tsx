@@ -19,6 +19,7 @@ import DashboardLayout from "@/components/dashboard-layout";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getVarkResultsAction, VarkResult } from "@/lib/actions/varkActions";
+import { BfiResult, getBfiResultsAction } from "@/lib/actions/bfiActions";
 const localizer = momentLocalizer(moment);
 
 // Custom toolbar to remove navigation and date display
@@ -51,6 +52,11 @@ const UserProfilePage = () => {
   const [varkResults, setVarkResults] = useState<VarkResult | null>(null);
   const [varkLoading, setVarkLoading] = useState(false);
 
+  const [canGenerateBfi, setCanGenerateBfi] = useState(false);
+  const [gettingBfiError, setGettingBfiError] = useState<string | null>(null);
+  const [bfiResults, setBfiResults] = useState<BfiResult | null>(null);
+  const [bfiLoading, setBfiLoading] = useState(false);
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -60,6 +66,10 @@ const UserProfilePage = () => {
 
         if (data?.vark_status === UserExamStatus.FINISHED) {
           setCanGenerateVark(true);
+        }
+
+        if (data?.bfi_status === UserExamStatus.FINISHED) {
+          setCanGenerateBfi(true);
         }
         // Convert schedule to calendar events if available
         if (data?.schedule) {
@@ -173,6 +183,23 @@ const UserProfilePage = () => {
       setVarkLoading(false);
     }
   }
+
+  const generateBfiResults = async () => {
+    try {
+      setBfiLoading(true);
+      const response = await getBfiResultsAction(id as string);
+      if (response.success) {
+        setBfiResults(response.data);
+      } else {
+        setGettingBfiError(response.message || "Failed to generate BFI results");
+      }
+    } catch (error) {
+      console.error("Error generating BFI results:", error);
+      setGettingBfiError("Failed to generate BFI results");
+    } finally {
+      setBfiLoading(false);
+    }
+  }
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8 h-screen">
@@ -232,8 +259,8 @@ const UserProfilePage = () => {
               <CardTitle>Basic Information</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
                   <div className="mt-2 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Name:</span>
@@ -261,8 +288,8 @@ const UserProfilePage = () => {
               <CardTitle>Pairing Components</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
                   <div className="mt-2 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">VARK Status:</span>
@@ -290,7 +317,10 @@ const UserProfilePage = () => {
                             </div>
                           )}
                         </span>
-                        <span className="font-medium">
+
+                        <span className="font-medium text-red-200">{gettingVarkError}</span>
+                      </div>
+                      <span className="font-medium">
                           {canGenerateVark ? (
                             <Button
                               variant="outline"
@@ -303,9 +333,36 @@ const UserProfilePage = () => {
                             <span className="text-sm text-muted-foreground">Not available yet</span>
                           )}
                         </span>
-                        <span className="font-medium text-red-200">{gettingVarkError}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">BFI Results:</span>
+                      <div>
+                        <span className="font-medium">
+                          {bfiResults && (
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-muted-foreground">Openness: {bfiResults.Openness}</span>
+                              <span className="text-sm text-muted-foreground">Conscientiousness: {bfiResults.Conscientiousness}</span>
+                              <span className="text-sm text-muted-foreground">Extroversion: {bfiResults.Extroversion}</span>
+                              <span className="text-sm text-muted-foreground">Agreeableness: {bfiResults.Agreeableness}</span>
+                              <span className="text-sm text-muted-foreground">Neuroticism: {bfiResults.Neuroticism}</span>
+                            </div>
+                          )}
+                        </span>
+                        <span className="font-medium text-red-200">{gettingBfiError}</span>
                       </div>
-
+                      <span className="font-medium">
+                        {canGenerateBfi ? (
+                          <Button
+                            variant="outline"
+                            onClick={generateBfiResults}
+                            disabled={bfiLoading}
+                          >
+                            {bfiLoading ? "Generating..." : "Generate BFI"}
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not available yet</span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>
