@@ -275,33 +275,37 @@ const UserProfilePage = () => {
 
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">VARK Results:</span>
-                      <span className="font-medium">
-                        {varkResults && (
-                          <div className="flex items-center space-x-2">
-                            {/* <div className="h-4 w-4 bg-primary/20 rounded"></div> */}
-                            <span className="text-sm text-muted-foreground">V: {varkResults.Visual}</span>
-                            {/* <div className="h-4 w-4 bg-orange-300 rounded"></div> */}
-                            <span className="text-sm text-muted-foreground">A: {varkResults.Auditory}</span>
-                            {/* <div className="h-4 w-4 bg-green-300 rounded"></div> */}
-                            <span className="text-sm text-muted-foreground">R: {varkResults["Read/Write"]}</span>
-                            {/* <div className="h-4 w-4 bg-blue-300 rounded"></div> */}
-                            <span className="text-sm text-muted-foreground">K: {varkResults.Kinesthetic}</span>
-                          </div>
-                        )}
-                      </span>
-                      <span className="font-medium">
-                        {canGenerateVark ? (
-                          <Button
-                            variant="outline"
-                            onClick={generateVarkResults}
-                            disabled={varkLoading}
-                          >
-                            {varkLoading? "Generating..." : "Generate VARK"}
-                          </Button>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Not available yet</span>
-                        )}
-                      </span>
+                      <div>
+                        <span className="font-medium">
+                          {varkResults && (
+                            <div className="flex items-center space-x-2">
+                              {/* <div className="h-4 w-4 bg-primary/20 rounded"></div> */}
+                              <span className="text-sm text-muted-foreground">V: {varkResults.Visual}</span>
+                              {/* <div className="h-4 w-4 bg-orange-300 rounded"></div> */}
+                              <span className="text-sm text-muted-foreground">A: {varkResults.Auditory}</span>
+                              {/* <div className="h-4 w-4 bg-green-300 rounded"></div> */}
+                              <span className="text-sm text-muted-foreground">R: {varkResults["Read/Write"]}</span>
+                              {/* <div className="h-4 w-4 bg-blue-300 rounded"></div> */}
+                              <span className="text-sm text-muted-foreground">K: {varkResults.Kinesthetic}</span>
+                            </div>
+                          )}
+                        </span>
+                        <span className="font-medium">
+                          {canGenerateVark ? (
+                            <Button
+                              variant="outline"
+                              onClick={generateVarkResults}
+                              disabled={varkLoading}
+                            >
+                              {varkLoading ? "Generating..." : "Generate VARK"}
+                            </Button>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Not available yet</span>
+                          )}
+                        </span>
+                        <span className="font-medium text-red-200">{gettingVarkError}</span>
+                      </div>
+
                     </div>
                   </div>
                 </div>
