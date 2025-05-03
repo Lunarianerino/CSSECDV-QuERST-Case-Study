@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AccountType } from "@/models/account";
 
-import { Exam, Question, Choice, Vark, SpecialExam } from "@/models";
+import { Exam, Question, Choice, Vark, SpecialExam, Account, ExamStatus } from "@/models";
 import { VARKAttributes } from "@/models/vark";
 import { ExamTypes } from "@/models/exam";
 import mongoose from "mongoose";
@@ -166,5 +166,87 @@ export async function saveVarkMappingsAction(data: VarkSubmissionData) {
   } catch (error) {
     console.error("Error saving VARK mappings:", error);
     return { success: false, message: "Failed to save VARK mappings" };
+  }
+}
+
+export interface VarkResult {
+  [VARKAttributes.V]: number;
+  [VARKAttributes.A]: number;
+  [VARKAttributes.R]: number;
+  [VARKAttributes.K]: number;
+};
+
+export interface VarkResultResponse {
+  success: boolean;
+  message: string;
+  data: VarkResult | null;
+}
+export async function getVarkResultsAction(userId: string):Promise<VarkResultResponse>  {
+  try {
+    // Check if user is authorized (admin only)
+    const session = await getServerSession(authOptions);
+    if (!session || session.user?.type!== AccountType.ADMIN) {
+      throw new Error("Not authorized to access user data");
+    }
+
+    // Get user details
+    const user = await Account.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get the examId from the SpecialExam document for VARK
+    const specialExam = await SpecialExam.findOne({ tag: ExamTags.VARK });
+    const examId = specialExam?.examId.toString();
+
+    if (!examId) {
+      throw new Error("VARK exam not found");
+    }
+
+    // Get all VARK details
+    const varkDetails = await Vark.find({});
+
+    // Get all user answers sorted by attempt number
+    const userAnswers = await ExamStatus.find({ userId: userId, examId: examId  }).populate({
+      path: "answers",
+      model: "ExamAnswers",
+    }).sort({ attemptNumber: -1 }).limit(1);
+
+    if (!userAnswers) {
+      throw new Error("User answers not found");
+    };
+    
+    const latestUserAnswer = userAnswers[0].answers;
+
+    // for every answer in latestUserAnswer, find the varkDetails that match the answerId and add the attribute to the varkResults object
+    const varkResults: any = {
+      [VARKAttributes.V]: 0,
+      [VARKAttributes.A]: 0,
+      [VARKAttributes.R]: 0,
+      [VARKAttributes.K]: 0,
+    };
+    latestUserAnswer.forEach((answer: any) => {
+      // the answer_ids is located in answers_choice as an array
+      const answerIds = answer.answers_choice;
+      answerIds.forEach((answerId: any) => {
+        const varkDetail = varkDetails.find((vark: any) => vark.answerId.toString() === answerId.toString());
+        if (varkDetail) {
+          varkResults[varkDetail.attribute] += 1;
+        }
+        // } else {
+        //   console.log("VARK detail not found for answerId: " + answerId);
+        // }
+      });
+    })
+
+    // console.log(varkResults);
+    // console.log(varkDetails);
+    return {
+      success: true,
+      message: "VARK results retrieved successfully",
+      data: varkResults,
+    }
+  } catch (error) {
+    throw new Error("Failed to get VARK results: " + error);
   }
 }

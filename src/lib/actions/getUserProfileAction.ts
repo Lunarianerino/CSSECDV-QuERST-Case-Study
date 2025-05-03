@@ -8,7 +8,8 @@ import { AccountType } from "@/models/account";
 import { UserExamStatus } from "@/models/examStatus";
 import { MatchStatus } from "@/models/match";
 import { WeeklySchedule } from "@/types/schedule";
-
+import { SpecialExam } from "@/models";
+import { ExamTags } from "@/models/specialExam";
 export interface UserProfile {
   id: string;
   name: string;
@@ -16,6 +17,8 @@ export interface UserProfile {
   type: string;
   onboarded: boolean;
   schedule: any; // Weekly schedule from schedule action
+  bfi_status: string;
+  vark_status: string;
   exams: {
     id: string;
     examId: string;
@@ -60,6 +63,32 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
       return null;
     }
 
+    const specialExams = await SpecialExam.find({});
+    let VARKStatus = "No VARK Questionnaire set";
+    let BFIStatus = "No BFI Questionnaire set";
+    if (specialExams) {
+      const VARKExam = specialExams.find((exam) => exam.tag.includes(ExamTags.VARK));
+      const BFIExam = specialExams.find((exam) => exam.tag.includes(ExamTags.BFI));
+      if (VARKExam) {
+        const VarkExamAttempt = await ExamStatus.find({ userId: userId, examId: VARKExam?.examId.toString() });
+        if (VarkExamAttempt.length > 0) {
+          VARKStatus = VarkExamAttempt[VarkExamAttempt.length - 1].status;
+        } else {
+          VARKStatus = "No attempt assigned";
+        }
+      }
+
+      if (BFIExam) {
+        const BFIExamAttempt = await ExamStatus.find({ userId: userId, examId: BFIExam?.examId.toString() });      
+
+        if (BFIExamAttempt.length > 0) {
+          BFIStatus = BFIExamAttempt[BFIExamAttempt.length - 1].status;
+        } else {
+          BFIStatus = "No attempt assigned";
+        }
+      }
+
+    }
     // Get user schedule directly from database
     let schedule = null;
     try {
@@ -152,6 +181,8 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
       email: user.email,
       type: user.type,
       onboarded: user.onboarded,
+      bfi_status: BFIStatus,
+      vark_status: VARKStatus,
       schedule,
       exams,
       pairings,
