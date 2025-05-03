@@ -4,8 +4,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AccountType } from "@/models/account";
 
-import { Exam, Question, Choice, Bfi } from "@/models";
+import { Exam, Question, Choice, Bfi, SpecialExam } from "@/models";
 import { BFIAttributes } from "@/models/bfi";
+import { ExamTypes } from "@/models/exam";
+import { ExamTags } from "@/models/specialExam";
 import mongoose from "mongoose";
 
 // Interface for the BFI mapping data
@@ -31,8 +33,17 @@ export async function getExamsForBfiAction() {
     if (!session || session.user?.type !== AccountType.ADMIN) {
       throw new Error("Not authorized to access user data");
     }
-    const exams = await Exam.find({});
-    
+    // const exams = await Exam.find({});
+    const exams = await Exam.find({
+      type: ExamTypes.BFI,
+    });
+
+    const markedBfi = await SpecialExam.find({
+      tag: ExamTags.BFI,
+    });
+
+    const markedBfiIds = markedBfi.map((exam: any) => exam.examId.toString());
+
     return {
       success: true,
       message: "Exams retrieved successfully",
@@ -40,6 +51,7 @@ export async function getExamsForBfiAction() {
         id: exam._id.toString(),
         name: exam.name,
         description: exam.description,
+        selected: markedBfiIds.includes(exam._id.toString()),
       })),
     };
   } catch (error) {
@@ -143,6 +155,12 @@ export async function saveBfiMappingsAction(data: BfiSubmissionData) {
       }));
       await Bfi.insertMany(bfiMappings);
     }
+
+    await SpecialExam.findOneAndUpdate(
+      { tag: ExamTags.BFI },
+      { examId: data.examId },
+      { upsert: true }
+    );
 
     return { 
       success: true, 

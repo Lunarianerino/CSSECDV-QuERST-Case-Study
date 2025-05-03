@@ -12,11 +12,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { BFIAttributes } from "@/models/bfi";
 import { getExamsForBfiAction, getExamDetailsForBfiAction, saveBfiMappingsAction } from "@/lib/actions/bfiActions";
+import { Loader2 } from "lucide-react";
 
 interface Exam {
   id: string;
   name: string;
   description: string;
+  selected: boolean;
 }
 
 interface Choice {
@@ -62,6 +64,11 @@ const Page = () => {
         const response = await getExamsForBfiAction();
         if (response.success && response.data) {
           setExams(response.data);
+
+          const selectedExam = response.data.find(exam => exam.selected);
+          if (selectedExam) {
+            handleExamSelect(selectedExam.id);
+          }
         } else {
           toast.error(response.message || "Failed to fetch exams");
         }
@@ -205,8 +212,9 @@ const Page = () => {
 
         {loading && (
           <div className="flex items-center justify-center p-8">
-            <p>Loading...</p>
-          </div>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading BFI mappings...</span>
+    </div>
         )}
 
         {!loading && examDetails && (

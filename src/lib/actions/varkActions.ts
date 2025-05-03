@@ -4,9 +4,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AccountType } from "@/models/account";
 
-import { Exam, Question, Choice, Vark } from "@/models";
+import { Exam, Question, Choice, Vark, SpecialExam } from "@/models";
 import { VARKAttributes } from "@/models/vark";
+import { ExamTypes } from "@/models/exam";
 import mongoose from "mongoose";
+import { ExamTags } from "@/models/specialExam";
 
 // Interface for the VARK mapping data
 export interface VarkMapping {
@@ -30,8 +32,9 @@ export async function getExamsForVarkAction() {
     if (!session || session.user?.type !== AccountType.ADMIN) {
       throw new Error("Not authorized to access user data");
     }
-    const exams = await Exam.find({});
-    
+    const exams = await Exam.find({type: ExamTypes.VARK});
+    const markedVark = await SpecialExam.find({tag: ExamTags.VARK});
+    const markedVarkIds = markedVark.map((vark: any) => vark.examId.toString());
     return {
       success: true,
       message: "Exams retrieved successfully",
@@ -39,6 +42,7 @@ export async function getExamsForVarkAction() {
         id: exam._id.toString(),
         name: exam.name,
         description: exam.description,
+        selected: markedVarkIds.includes(exam._id.toString()),
       })),
     };
   } catch (error) {
@@ -147,6 +151,13 @@ export async function saveVarkMappingsAction(data: VarkSubmissionData) {
 
       await Vark.insertMany(varkMappings);
     }
+
+    // Find and update the SpecialExam document for VARK
+    await SpecialExam.findOneAndUpdate(
+      { tag: ExamTags.VARK },
+      { examId: data.examId },
+      { upsert: true, new: true }
+    );
 
     return { 
       success: true, 
