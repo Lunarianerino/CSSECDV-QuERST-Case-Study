@@ -42,7 +42,6 @@ const ExamContent = () => {
             choices: q.choices?.map(c => ({
               id: c.id,
               text: c.text,
-              // We can safely include isCorrect here since it's coming from the server
               isCorrect: c.isCorrect
             })) || []
           }));

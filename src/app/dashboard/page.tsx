@@ -2,9 +2,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth"; // Import your auth options
+import { authOptions } from "@/lib/auth";
 import StudentDashboard from "@/components/dashboard/student/StudentDashboard";
-// Import missing components
 import TutorDashboard from "@/components/dashboard/tutor/TutorDashboard";
 import AdminDashboard from "@/components/dashboard/admin/AdminDashboard";
 import DashboardLayout from "@/components/dashboard-layout";
