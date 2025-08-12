@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "devdocker": "docker compose -f docker-compose.local.yml up -d;MONGO_DB_URI=mongodb://root:querst_dev_password@localhost:27017 next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
