@@ -41,7 +41,6 @@ export default function RegisterForm({ isRedirectEnabled = true }: RegisterFormP
   });
   const watchPassword = form.watch("password");
   const watchConfirmPassword = form.watch("confirmPassword");
-  const ref = useRef<HTMLFormElement>(null);
   
   async function onSubmit(data: RegisterFormValues) {
     if (watchPassword !== watchConfirmPassword) {

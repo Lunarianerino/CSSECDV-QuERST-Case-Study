@@ -2,9 +2,8 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
-import { LayoutDashboard, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { AccountType } from "@/models/account";
 import { getSessionUserType } from "@/lib/queries/getSessionUserType";
 import { signOut } from "next-auth/react";
