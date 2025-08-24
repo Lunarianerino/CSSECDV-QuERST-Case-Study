@@ -11,6 +11,11 @@ Persistence goes through a MongoDB database.
 - [WebStorm - IDE option for development (Non-commercial license available)](https://www.jetbrains.com/webstorm/)
 - [Visual Studio Code - Code Editor option for development](https://code.visualstudio.com)
 
+### Set up the `AUTH_SECRET` environment variable
+Run this command before doing anything else: `npx auth secret`
+This command will set up the required `AUTH_SECRET` environment variable for you. Otherwise, you won't be able to log in.
+This secret is used to generate JWT authorization tokens.
+
 ### Running the project with Docker
 Generally, you won't need to actually do anything but install Docker before running this command:
 ```bash

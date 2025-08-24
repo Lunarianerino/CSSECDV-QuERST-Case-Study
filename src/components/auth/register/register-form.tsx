@@ -19,7 +19,11 @@ import {
 } from "@/components/ui/form";
 import { registerSchema, RegisterFormValues } from "@/lib/validations/auth";
 
-export default function RegisterForm() {
+interface RegisterFormProps {
+    isRedirectEnabled?: boolean;
+}
+
+export default function RegisterForm({ isRedirectEnabled = true }: RegisterFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +44,6 @@ export default function RegisterForm() {
   const ref = useRef<HTMLFormElement>(null);
   
   async function onSubmit(data: RegisterFormValues) {
-    // In a real app, this would call an API endpoint to register the user
     if (watchPassword !== watchConfirmPassword) {
       toast.error("Passwords do not match");
       return; 
@@ -65,12 +68,12 @@ export default function RegisterForm() {
 
       if (logiRes?.error) {
         toast.error(logiRes.error);
-        router.push("/login");
+        isRedirectEnabled && router.push("/login");
         return; 
       }
 
       toast.success("Registration successful!");
-      router.push("/onboarding");
+      isRedirectEnabled && router.push("/onboarding");
     } catch (e) {
       toast.error("An error occurred while registering");
       return; 
@@ -153,7 +156,7 @@ export default function RegisterForm() {
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
           Register
         </Button>
       </form>
