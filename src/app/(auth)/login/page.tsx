@@ -19,7 +19,7 @@ const Page = async () => {
         <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
             Don't have an account?{" "}
-            <Link href="/register" className="text-primary underline hover:text-primary/80">
+            <Link href="/" className="text-primary underline hover:text-primary/80">
               Register
             </Link>
           </p>
