@@ -1,4 +1,3 @@
-// Change from "use server" to "use client" since this component uses interactive elements
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
@@ -22,7 +21,9 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   });
 
   useEffect(() => {
-    setUserType(userType);
+    if (data) {
+      setUserType(data);
+    }
   }, [data]);
 
   if (!userType) {
@@ -36,27 +37,6 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Sidebar
-      <div className="w-64 border-r bg-card hidden md:block">
-        <div className="h-16 border-b flex items-center px-6">
-          <Link href="/" className="font-semibold text-lg">Examination Platform</Link>
-        </div>
-        <div className="py-4">
-          <nav className="space-y-1 px-3">
-            {links.map((link) => (
-              <Link 
-                key={link.href}
-                href={link.href}
-                className="flex items-center py-2 px-3 text-sm rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-              >
-                <span className="mr-3">{link.icon}</span>
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </div> */}
-
       {/* Main content */}
       <div className="flex-1 flex flex-col">
         <header className="h-16 border-b flex items-center justify-between px-6">
