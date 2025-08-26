@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import {useEffect, useMemo, useState} from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Eye, EyeOff } from "lucide-react";
+import {CheckIcon, Eye, EyeOff, Loader2} from "lucide-react";
 import {
   Form,
   FormControl,
@@ -19,10 +18,10 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { loginSchema, LoginFormValues } from "@/lib/validations/auth";
+import { useMutation } from "@tanstack/react-query";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const form = useForm<LoginFormValues>({
@@ -33,31 +32,46 @@ export default function LoginForm() {
     },
   });
 
+  const { mutateAsync, isPending, isError, isSuccess, error } = useMutation({
+    mutationKey: ['account-login'],
+    mutationFn: async (data: LoginFormValues) => {
+      return await signIn("credentials", {
+        email: data.email,
+        password: data.password,
+        redirect: false,
+      });
+    },
+  });
+
   async function onSubmit(data: LoginFormValues) {
-    setIsLoading(true);
-    toast.loading("Logging in...", {
-      id: "login",
-    });
-    const res = await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-    });
+    await mutateAsync(data);
+  }
 
-    if (res?.error) {
-      toast.error(res.error, {
+  useEffect(() => {
+    if (isError) {
+      toast.error(error.message, {
         id: "login",
-      });  
-      setIsLoading(false);
+      });
     }
-    if (res?.ok) {
-      toast.success("Logged in successfully", {
-        id: "login",
-      }); 
+  }, [isError, error]);
 
+  useEffect(() => {
+    if (isSuccess) {
       router.push("/dashboard");
     }
-  }
+  }, [isSuccess]);
+
+  const buttonText = useMemo(() => {
+    if (isPending) {
+      return 'Logging in...';
+    }
+    else if (isSuccess) {
+      return 'Logged in!';
+    }
+    else {
+      return 'Log in';
+    }
+  }, [isPending, isSuccess]);
 
   return (
     <Form {...form}>
@@ -105,8 +119,10 @@ export default function LoginForm() {
         )}
       />
 
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        Log in
+      <Button type="submit" className="w-full" disabled={isPending || isSuccess}>
+        {isPending && <Loader2 className="animate-spin" />}
+        {isSuccess && <CheckIcon />}
+        {buttonText}
       </Button>
     </form>
   </Form>

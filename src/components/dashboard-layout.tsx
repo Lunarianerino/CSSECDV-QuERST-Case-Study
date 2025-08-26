@@ -2,12 +2,12 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
-import { LayoutDashboard, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { AccountType } from "@/models/account";
 import { getSessionUserType } from "@/lib/queries/getSessionUserType";
 import { signOut } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 interface DashboardLayoutProps {
   children: ReactNode;
   title: string;
@@ -15,14 +15,15 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   const [userType, setUserType] = useState<AccountType | null>(null);
-  useEffect(() => {
-    const fetchUserType = async () => {
-      const userType = await getSessionUserType();
-      setUserType(userType);
-    };
 
-    fetchUserType();
-  }, []);
+  const { data } = useQuery({
+    queryKey: ['userType'],
+    queryFn: getSessionUserType,
+  });
+
+  useEffect(() => {
+    setUserType(userType);
+  }, [data]);
 
   if (!userType) {
     return null;
