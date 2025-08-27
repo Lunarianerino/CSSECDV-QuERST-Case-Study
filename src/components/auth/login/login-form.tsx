@@ -35,11 +35,21 @@ export default function LoginForm() {
   const { mutateAsync, isPending, isError, isSuccess, error } = useMutation({
     mutationKey: ['account-login'],
     mutationFn: async (data: LoginFormValues) => {
-      return await signIn("credentials", {
+      const res =  await signIn("credentials", {
         email: data.email,
         password: data.password,
         redirect: false,
       });
+
+      if (!res) {
+        throw new Error("No response from server");
+      }
+
+      if (!res.ok) {
+        throw new Error("Invalid credentials");
+      }
+
+      return res;
     },
   });
 
