@@ -1,20 +1,40 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
+The QuERST matchmaking system involves a Next.js stack to serve both backend and frontend code. 
+Persistence goes through a MongoDB database.
 
-First, run the development server:
+### Development Software
+- **BARE MINIMUM:** [Node.js](https://nodejs.org/en/download)
+- [MongoDB - if you don't want to run Docker](https://www.mongodb.com/products/updates/version-release)
+- [Docker - if you want to run a containerized database](https://www.docker.com)
+- [WebStorm - IDE option for development (Non-commercial license available)](https://www.jetbrains.com/webstorm/)
+- [Visual Studio Code - Code Editor option for development](https://code.visualstudio.com)
 
+### Set up the `AUTH_SECRET` environment variable
+Run this command before doing anything else: `npx auth secret`
+This command will set up the required `AUTH_SECRET` environment variable for you. Otherwise, you won't be able to log in.
+This secret is used to generate JWT authorization tokens.
+
+### Running the project with Docker
+Generally, you won't need to actually do anything but install Docker before running this command:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run devdocker
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This will configure a default MongoDB instance with a local user name and password for DB access.
+These credentials are used by the `MONGO_DB_URI` environment variable that's configured before running `next dev`.
+Drop-in replacements for `npm` can be used like `yarn`, `pnpm`, or `bun`.
+
+### Running the project without Docker
+First, check if MongoDB is configured and an environment variable for `MONGO_DB_URI` is configured before running the development server:
+```bash
+npm run dev
+```
+Drop-in replacements for `npm` can be used like `yarn`, `pnpm`, or `bun`.
+
+### Accessing the website for local development
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result. This step is the same regardless of whether you ran the project with Docker or not.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

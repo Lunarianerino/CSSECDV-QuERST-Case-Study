@@ -37,6 +37,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-hero: var(--hero);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -55,6 +56,7 @@
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
+  --hero: oklch(0.6396 0.1363 147.82);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
@@ -76,6 +78,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /*Excerpted From Figma AI*/
+  /* Paper-like background colors */
+  --paper-base: #faf9f7;
+  --paper-light: #fefdfb;
+  --paper-warm: #f8f7f4;
 }
 
 .dark {
@@ -110,6 +118,49 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Paper texture effect */
+@layer base {
+  .paper-texture {
+    background-color: var(--paper-base);
+    background-image:
+            radial-gradient(circle at 1px 1px, rgba(0,0,0,0.03) 1px, transparent 0),
+            radial-gradient(circle at 2px 2px, rgba(139,117,87,0.02) 1px, transparent 0);
+    background-size: 20px 20px, 40px 40px;
+    background-position: 0 0, 10px 10px;
+  }
+
+  .paper-grain {
+    position: relative;
+  }
+
+  .paper-grain::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0.015;
+    background-image:
+            repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 1px,
+                    rgba(139,117,87,0.8) 1px,
+                    rgba(139,117,87,0.8) 2px
+            ),
+            repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 1px,
+                    rgba(139,117,87,0.6) 1px,
+                    rgba(139,117,87,0.6) 2px
+            );
+    background-size: 3px 3px, 2px 2px;
+    pointer-events: none;
+  }
 }
 
 @layer base {

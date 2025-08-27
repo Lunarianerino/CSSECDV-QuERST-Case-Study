@@ -2,7 +2,6 @@
 import { Exam } from "@/models";
 import { connectToMongoDB } from "../db";
 
-//TODO: Implement a function that returns exams assigned to a user.
 export interface ExamDetails {
   id: string;
   name: string;
