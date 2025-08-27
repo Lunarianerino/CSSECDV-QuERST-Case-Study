@@ -103,6 +103,11 @@ const getNavigationData = (userType: string | undefined) => {
       ],
     },
     {
+      title: "Programs",
+      url: "/admin/programs",
+      icon: GraduationCap,
+    },
+    {
       title: "Settings",
       url: "/admin/settings",
       icon: Settings2,

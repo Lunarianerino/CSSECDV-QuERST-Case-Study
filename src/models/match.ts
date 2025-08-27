@@ -20,6 +20,7 @@ export interface IMatch extends Document {
   status: string;
   reason?: string;
   subject: string;
+  program?: Types.ObjectId;
   //TODO: consider adding timestamps
 }
 
@@ -30,6 +31,7 @@ export const MatchSchema: Schema = new Schema(
     status: { type: String, required: true, default: MatchStatus.PENDING, enum: MatchStatus }, 
     reason: { type: String, required: false },
     subject: { type: String, required: true },
+    program: { type: Schema.Types.ObjectId, required: false, ref: "Program" },
   },
   {
     timestamps: true,
