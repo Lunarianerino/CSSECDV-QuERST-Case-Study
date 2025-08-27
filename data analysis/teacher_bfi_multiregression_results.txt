@@ -1,0 +1,31 @@
+Multiple Regression Analysis Results
+
+                                 OLS Regression Results                                
+=======================================================================================
+Dep. Variable:        Closeness Score   R-squared (uncentered):                   0.997
+Model:                            OLS   Adj. R-squared (uncentered):              0.994
+Method:                 Least Squares   F-statistic:                              368.1
+Date:                Thu, 24 Jul 2025   Prob (F-statistic):                    2.24e-07
+Time:                        01:31:05   Log-Likelihood:                         -23.748
+No. Observations:                  11   AIC:                                      57.50
+Df Residuals:                       6   BIC:                                      59.49
+Df Model:                           5                                                  
+Covariance Type:            nonrobust                                                  
+===============================================================================================
+                                  coef    std err          t      P>|t|      [0.025      0.975]
+-----------------------------------------------------------------------------------------------
+Tutor_BFI_Openness              3.8146      2.043      1.867      0.111      -1.185       8.814
+Tutor_BFI_Conscientiousness    -1.8197      1.569     -1.160      0.290      -5.660       2.020
+Tutor_BFI_Extroversion          4.1806      1.834      2.280      0.063      -0.306       8.667
+Tutor_BFI_Agreeableness         3.8956      2.367      1.646      0.151      -1.895       9.686
+Tutor_BFI_Neuroticism           0.1909      1.831      0.104      0.920      -4.290       4.672
+==============================================================================
+Omnibus:                        3.387   Durbin-Watson:                   1.537
+Prob(Omnibus):                  0.184   Jarque-Bera (JB):                1.054
+Skew:                           0.016   Prob(JB):                        0.590
+Kurtosis:                       1.484   Cond. No.                         28.5
+==============================================================================
+
+Notes:
+[1] R² is computed without centering (uncentered) since the model does not contain a constant.
+[2] Standard Errors assume that the covariance matrix of the errors is correctly specified.
