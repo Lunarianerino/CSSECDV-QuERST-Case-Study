@@ -70,11 +70,11 @@ const getNavigationData = (userType: string | undefined) => {
       url: "/admin/users",
       icon: Users,
     },
-    {
-      title: "Pairings",
-      url: "/admin/pairings",
-      icon: GalleryVerticalEnd,
-    },
+    // {
+    //   title: "Pairings",
+    //   url: "/admin/pairings",
+    //   icon: GalleryVerticalEnd,
+    // },
     {
       title: "Exams",
       url: "/exams",
