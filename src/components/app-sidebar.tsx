@@ -114,7 +114,11 @@ const getNavigationData = (userType: string | undefined) => {
         {
           title: "Assign Users to Programs",
           url: "/admin/programs/assign",
-        }
+        },
+        {
+          title: "Pairings",
+          url: "/admin/programs/pairings",
+        },
       ]
     },
     {
