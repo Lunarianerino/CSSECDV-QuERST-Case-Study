@@ -20,6 +20,7 @@ export interface ProgramData {
     description: string;
     startDate: Date;
     endDate: Date;
+    participants: string[];
 }
 
 // Get function
@@ -43,7 +44,8 @@ export const getPrograms = async (): Promise<ProgramsResponse> => {
             title: program.title,
             description: program.description,
             startDate: program.startDate,
-            endDate: program.endDate
+            endDate: program.endDate,
+            participants: program.participants.map(x => x.toString())
         }));
 
         return {
@@ -109,3 +111,83 @@ export const createProgram = async (data: ProgramFormValues) : Promise<ProgramsR
         }
     }
 }
+
+export const assignParticipantsToProgram = async (programId: string, userIds: string[]): Promise<ProgramsResponse> => {
+    try {
+        const session = await getServerSession(authOptions);
+
+        if (!session || session.user?.type !== AccountType.ADMIN) {
+            return {
+                success: false,
+                error: "Unauthorized",
+                status: 401
+            }
+        }
+
+        await connectToMongoDB();
+        const program = await Program.findById(programId);
+
+        if (!program) {
+            return {
+                success: false,
+                error: "Program not found",
+                status: 404
+            };
+        }
+
+        program.participants = [...new Set([...program.participants.map(id => id.toString()), ...userIds])];
+        await program.save();
+
+        return {
+            success: true,
+            status: 200
+        };
+    } catch (error) {
+        console.error("Error assigning participants:", error);
+        return {
+            success: false,
+            error: "Internal Server Error",
+            status: 500
+        };
+    }
+};
+
+export const removeParticipantFromProgram = async (programId: string, userId: string): Promise<ProgramsResponse> => {
+    try {
+        const session = await getServerSession(authOptions);
+
+        if (!session || session.user?.type !== AccountType.ADMIN) {
+            return {
+                success: false,
+                error: "Unauthorized",
+                status: 401
+            }
+        }
+
+        await connectToMongoDB();
+        const program = await Program.findById(programId);
+
+        if (!program) {
+            return {
+                success: false,
+                error: "Program not found",
+                status: 404
+            };
+        }
+
+        program.participants = program.participants.filter(id => id.toString() !== userId);
+        await program.save();
+
+        return {
+            success: true,
+            status: 200
+        };
+    } catch (error) {
+        console.error("Error removing participant:", error);
+        return {
+            success: false,
+            error: "Internal Server Error",
+            status: 500
+        };
+    }
+};
