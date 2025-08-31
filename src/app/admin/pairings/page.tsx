@@ -1,3 +1,7 @@
+/*
+  ! This pairings feature is deprecated. Please use the new program-specific pairings feature instead found in programs/pairings.
+*/
+
 "use client";
 import DashboardLayout from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

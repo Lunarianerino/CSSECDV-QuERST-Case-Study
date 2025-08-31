@@ -7,6 +7,7 @@ export interface IProgram extends Document {
     startDate: Date;
     endDate: Date;
     participants: Types.Array<Types.ObjectId>;
+    pairings: Types.Array<{ tutor: Types.ObjectId; student: Types.ObjectId }>;
 }
 
 export const ProgramSchema = new Schema<IProgram>({
@@ -15,4 +16,5 @@ export const ProgramSchema = new Schema<IProgram>({
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     participants: [{ type: Types.ObjectId, ref: "User" }],
+    pairings: [{ tutor: { type: Types.ObjectId, ref: "User" }, student: { type: Types.ObjectId, ref: "User" } }]
 });

@@ -21,6 +21,7 @@ export interface ProgramData {
     startDate: Date;
     endDate: Date;
     participants: string[];
+    pairings: { id: string; tutor: string; student: string }[];
 }
 
 // Get function
@@ -45,7 +46,12 @@ export const getPrograms = async (): Promise<ProgramsResponse> => {
             description: program.description,
             startDate: program.startDate,
             endDate: program.endDate,
-            participants: program.participants.map(x => x.toString())
+            participants: program.participants.map(x => x.toString()),
+            pairings: program.pairings.map(x => ({
+                id: x._id.toString(),
+                tutor: x.tutor.toString(),
+                student: x.student.toString()
+            }))
         }));
 
         return {
@@ -184,6 +190,86 @@ export const removeParticipantFromProgram = async (programId: string, userId: st
         };
     } catch (error) {
         console.error("Error removing participant:", error);
+        return {
+            success: false,
+            error: "Internal Server Error",
+            status: 500
+        };
+    }
+};
+
+export const createPairing = async (programId: string, tutorId: string, studentId: string): Promise<ProgramsResponse> => {
+    try {
+        const session = await getServerSession(authOptions);
+
+        if (!session || session.user?.type !== AccountType.ADMIN) {
+            return {
+                success: false,
+                error: "Unauthorized",
+                status: 401
+            }
+        }
+
+        await connectToMongoDB();
+        const program = await Program.findById(programId);
+
+        if (!program) {
+            return {
+                success: false,
+                error: "Program not found",
+                status: 404
+            };
+        }
+
+        program.pairings.push({ tutor: tutorId, student: studentId });
+        await program.save();
+
+        return {
+            success: true,
+            status: 200
+        };
+    } catch (error) {
+        console.error("Error creating pairing:", error);
+        return {
+            success: false,
+            error: "Internal Server Error",
+            status: 500
+        };
+    }
+};
+
+export const removePairing = async (programId: string, pairingId: string): Promise<ProgramsResponse> => {
+    try {
+        const session = await getServerSession(authOptions);
+
+        if (!session || session.user?.type !== AccountType.ADMIN) {
+            return {
+                success: false,
+                error: "Unauthorized",
+                status: 401
+            }
+        }
+
+        await connectToMongoDB();
+        const program = await Program.findById(programId);
+
+        if (!program) {
+            return {
+                success: false,
+                error: "Program not found",
+                status: 404
+            };
+        }
+
+        program.pairings = program.pairings.filter(pairing => pairing.id !== pairingId);
+        await program.save();
+
+        return {
+            success: true,
+            status: 200
+        };
+    } catch (error) {
+        console.error("Error removing pairing:", error);
         return {
             success: false,
             error: "Internal Server Error",
