@@ -103,9 +103,19 @@ const getNavigationData = (userType: string | undefined) => {
       ],
     },
     {
-      title: "Programs",
+      title: "Tutoring Programs",
       url: "/admin/programs",
       icon: GraduationCap,
+      items: [
+        {
+          title: "View Programs",
+          url: "/admin/programs",
+        },
+        {
+          title: "Assign Users to Programs",
+          url: "/admin/programs/assign",
+        }
+      ]
     },
     {
       title: "Settings",

@@ -6,6 +6,7 @@ export interface IProgram extends Document {
     description: string;
     startDate: Date;
     endDate: Date;
+    participants: Types.Array<Types.ObjectId>;
 }
 
 export const ProgramSchema = new Schema<IProgram>({
@@ -13,4 +14,5 @@ export const ProgramSchema = new Schema<IProgram>({
     description: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
+    participants: [{ type: Types.ObjectId, ref: "User" }],
 });
