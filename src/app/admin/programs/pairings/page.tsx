@@ -15,21 +15,24 @@ import { Button } from "@/components/ui/button";
 import Combobox from "@/components/ui/combobox";
 import { DataTable } from "@/components/ui/data-table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { createPairing, getPrograms, ProgramData, removePairing } from "@/lib/actions/programActions";
+import { createPairing, getPrograms, PairingOptions, PairingSuggestion, ProgramData, removePairing, suggestPairings } from "@/lib/actions/programActions";
 import { getAllUsers } from "@/lib/actions/userActions";
 import { AccountType } from "@/models/account";
 import { BasicAccountInfo } from "@/types/accounts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { Loader2, Plus, TrashIcon } from "lucide-react";
+import { Loader2, Plus, StarsIcon, TrashIcon } from "lucide-react";
 import { set } from "mongoose";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
 } from "@/components/ui/hover-card"
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Page = () => {
 
@@ -68,7 +71,7 @@ const Page = () => {
                 </HoverCard>
             )
         },
-                {
+        {
             id: "delete",
             header: "Delete",
             cell: ({ row }) => (
@@ -82,7 +85,7 @@ const Page = () => {
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This action cannot be undone. This will remove this participant from the program. This means that all their data in relation to this program will also be removed, such as their pairings.
+                                This action cannot be undone. This will remove this pairing from the program.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -94,6 +97,70 @@ const Page = () => {
             )
         }
     ];
+    const suggestPairingColumns: ColumnDef<PairingSuggestion>[] = [
+                {
+            id: "select",
+            header: ({ table }) => (
+                <Checkbox
+                    checked={
+                        table.getIsAllPageRowsSelected() ||
+                        (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                    aria-label="Select all"
+                />
+            ),
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            ),
+        },
+        {
+            header: "Tutor",
+            accessorKey: "tutorId",
+            cell: ({ row }) => (
+                <HoverCard>
+                    <HoverCardTrigger>
+                        {getBasicAccountInfo(row.getValue("tutorId")!)?.name ?? "--"}
+                    </HoverCardTrigger>
+                    <HoverCardContent>
+                        <p>{getBasicAccountInfo(row.getValue("tutorId")!)?.email ?? "--"}</p>
+                    </HoverCardContent>
+                </HoverCard>
+            )
+        },
+        {
+            header: "Student",
+            accessorKey: "studentId",
+            cell: ({ row }) => (
+                <HoverCard>
+                    <HoverCardTrigger>
+                        {getBasicAccountInfo(row.getValue("studentId")!)?.name ?? "--"}
+                    </HoverCardTrigger>
+                    <HoverCardContent>
+                        <p>{getBasicAccountInfo(row.getValue("studentId")!)?.email ?? "--"}</p>
+                    </HoverCardContent>
+                </HoverCard>
+            )
+        },
+        {
+            header: "Similarity",
+            accessorKey: "similarity",
+            cell: ({ row }) => (
+                row.getValue("similarity") ? parseFloat(row.getValue("similarity")!).toFixed(2) : "--"
+            )
+        },
+        {
+            header: "Reason",
+            accessorKey: "reason",
+            cell: ({ row }) => (
+                row.getValue("reason") ? (row.getValue("reason")!) : "--"
+            )
+        }
+    ];
 
     const [programs, setPrograms] = useState<ProgramData[]>([]);
     const [selectedProgram, setSelectedProgram] = useState<ProgramData | null>(null);
@@ -101,8 +168,18 @@ const Page = () => {
     const [programParticipants, setProgramParticipants] = useState<BasicAccountInfo[]>([]);
     const [selectedTutor, setSelectedTutor] = useState<BasicAccountInfo | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<BasicAccountInfo | null>(null);
+
+    const [pairingSuggestions, setPairingSuggestions] = useState<PairingSuggestion[]>([]);
+    const [pairingOptions, setPairingOptions] = useState<PairingOptions>({});
+
     const [isCreatePairingOpen, setCreatePairingOpen] = useState(false);
+    const [isSuggestPairingsOpen, setSuggestPairingsOpen] = useState(false);
+    const [isPairingOptionsOpen, setPairingOptionsOpen] = useState(false);
+
     const [pairings, setPairings] = useState<Pairing[]>([]);
+
+    const [loading, setLoading] = useState(false);
+
     const queryClient = useQueryClient();
     const { data: programsData, isLoading: isLoadingPrograms, isError: isErrorPrograms } = useQuery({
         queryKey: ['programs'],
@@ -111,7 +188,7 @@ const Page = () => {
 
     const { data: usersData, isLoading: isLoadingUsers, isError: isErrorUsers } = useQuery({
         queryKey: ['users'],
-        queryFn: getAllUsers
+        queryFn: getAllUsers,
     });
 
     const { mutateAsync: createPairingAsync, isPending: isCreating, isError: isCreateError, isSuccess: isCreateSuccess, error: createError } = useMutation({
@@ -151,6 +228,27 @@ const Page = () => {
 
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['programs'] });
+        },
+
+        onError: (error) => {
+
+        }
+    });
+
+    const { mutateAsync: suggestPairingsAsync, isPending: isSuggesting, isError: isSuggestError, isSuccess: isSuggestSuccess, error: suggestError } = useMutation({
+        mutationKey: ['suggestPairings'],
+        mutationFn: async (programId: string) => {
+            const res = await suggestPairings(programId, pairingOptions);
+
+            if (!res.success) {
+                throw new Error(res.error);
+            }
+
+            return res;
+        },
+
+        onSuccess: (result) => {
+            setPairingSuggestions(result.data || []);
         },
 
         onError: (error) => {
@@ -203,6 +301,10 @@ const Page = () => {
         }
     }, [isRemoveError]);
 
+    const getBasicAccountInfo = (id: string): BasicAccountInfo | undefined => {
+        return users.find(u => u.id === id);
+    };
+
     const handleProgramSelect = (programId: string) => {
         const program = programs.find(p => p.id === programId) || null;
         setSelectedProgram(program);
@@ -233,6 +335,18 @@ const Page = () => {
         setCreatePairingOpen(true);
     };
 
+    const handleOpenSuggestPairings = () => {
+        setPairingOptionsOpen(false);
+        setSuggestPairingsOpen(true);
+        if (selectedProgram) {
+            suggestPairingsAsync(selectedProgram.id);
+        }
+    };
+
+    const handleOpenPairingOptions = () => {
+        setPairingOptionsOpen(true);
+    };
+
     const handleRemovePairing = async (pairingId: string) => {
         if (!selectedProgram) return;
 
@@ -242,6 +356,13 @@ const Page = () => {
             console.error("Error removing pairing:", error);
         }
     };
+
+    const handleAcceptPairings = async () => {
+        if (!selectedProgram) return;
+
+        setLoading(true);
+        //TODO
+    };
     useEffect(() => {
         if (programsData) {
             // console.log("Programs data:", programsData);
@@ -250,10 +371,15 @@ const Page = () => {
     }, [programsData]);
 
     useEffect(() => {
-        if (usersData) {
-            // console.log("Users data:", usersData);
-            setUsers(usersData || []);
-        }
+        const asyncAssignUsers = async () => {
+            setLoading(true);
+            if (usersData) {
+                // console.log("Users data:", usersData);
+                await setUsers(usersData || []);
+            }
+            setLoading(false);
+        };
+        asyncAssignUsers();
     }, [usersData]);
 
     useEffect(() => {
@@ -270,29 +396,37 @@ const Page = () => {
         }
     }, [selectedProgram, users]);
 
+
     return (
         <>
             <DashboardLayout title="Program Pairings">
-                <Combobox schema={programs.map(program => ({
-                    value: program.id,
-                    label: program.title
-                }))}
-                    value={selectedProgram?.id || ""}
-                    onChange={handleProgramSelect}
-                />
-
-
-                {selectedProgram ?
+                {isLoadingPrograms || isLoadingUsers ? <Loader2 className="animate-spin" /> : isErrorPrograms || isErrorUsers ? <div>Error loading data.</div> :
                     <>
-                        <Button onClick={handleOpenCreatePairing} className="my-4">
-                            <Plus /> Create Pairing
-                        </Button>
-                        <DataTable columns={pairingColumns} data={pairings} />
+                        <Combobox schema={programs.map(program => ({
+                            value: program.id,
+                            label: program.title
+                        }))}
+                            value={selectedProgram?.id || ""}
+                            onChange={handleProgramSelect}
+                        />
 
+
+                        {selectedProgram ?
+                            <>
+                                <Button onClick={handleOpenCreatePairing} className="my-4">
+                                    <Plus /> Create Pairing
+                                </Button>
+                                <Button onClick={handleOpenPairingOptions} className="my-4 mx-4">
+                                    <StarsIcon /> Suggest Pairings
+                                </Button>
+                                <DataTable columns={pairingColumns} data={pairings} />
+
+                            </>
+                            : (
+                                <center>Please select a program to see the details.</center>
+                            )}
                     </>
-                    : (
-                        <center>Please select a program to see the details.</center>
-                    )}
+                }
             </DashboardLayout>
 
             <Dialog open={isCreatePairingOpen} onOpenChange={setCreatePairingOpen}>
@@ -326,8 +460,74 @@ const Page = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={isSuggestPairingsOpen} onOpenChange={setSuggestPairingsOpen}>
+                <DialogContent className="min-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>Suggest Pairings</DialogTitle>
+                    </DialogHeader>
+                    {isSuggesting ?
+                        <center><Loader2 className="animate-spin" /></center>
+                        : pairingSuggestions.length === 0 ? <div>No suggestions available.</div>
+                            : <div className="flex flex-col gap-4 min-w-0">
+                                <DataTable columns={suggestPairingColumns} data={pairingSuggestions} />
+                            </div>
+                    }
+                    <DialogFooter>
+                        {!isSuggesting && pairingSuggestions.length > 0 &&
+                            <Button onClick={handleAcceptPairings} disabled={!selectedProgram || loading}>{loading ? <Loader2 className="animate-spin" /> : "Accept All"}</Button>
+                        }
+
+                        {/* <Button onClick={handleSuggestPairings} disabled={!selectedProgram}>Suggest</Button> */}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isPairingOptionsOpen} onOpenChange={setPairingOptionsOpen}>
+                <DialogContent className="w-1/3">
+                    <DialogHeader>
+                        <DialogTitle>Pairing Options</DialogTitle>
+                    </DialogHeader>
+                    {/* Options form */}
+                    <div className="flex flex-col gap-4">
+                        {/* <div className="flex flex-col">
+                            <label className="mb-2 font-semibold">Max Students per Tutor</label>
+                            <Input type="number" min={1} className="border border-gray-300 rounded px-2 py-1" value={pairingOptions.maxStudentsPerTutor || ""} onChange={(e) => setPairingOptions(prev => ({ ...prev, maxStudentsPerTutor: e.target.value ? parseInt(e.target.value) : undefined }))} />
+                        </div> */}
+
+                        <div className="flex flex-col">
+                            <label className="mb-2 font-semibold">BFI</label>
+                            <Switch checked={pairingOptions.bfi?.enabled} onCheckedChange={(checked) => setPairingOptions(prev => ({ ...prev, bfi: { ...prev.bfi, enabled: checked } }))} />
+                        </div>
+                        {pairingOptions.bfi?.enabled &&
+                            <div className="flex flex-col gap-2 ml-4">
+                                <div className="flex flex-col">
+                                    <label className="mb-2 font-semibold">Weight</label>
+                                    <Input type="number" min={0} max={100} step={1} className="border border-gray-300 rounded px-2 py-1" value={pairingOptions.bfi?.weight || ""} onChange={(e) => setPairingOptions(prev => ({ ...prev, bfi: { ...prev.bfi, weight: e.target.value ? parseFloat(e.target.value) : 1 } }))} />
+                                </div>
+                            </div>
+                        }
+
+                        <div className="flex flex-col">
+                            <label className="mb-2 font-semibold">VARK</label>
+                            <Switch checked={pairingOptions.vark?.enabled} onCheckedChange={(checked) => setPairingOptions(prev => ({ ...prev, vark: { ...prev.vark, enabled: checked } }))} />
+                        </div>
+                        {pairingOptions.vark?.enabled &&
+                            <div className="flex flex-col gap-2 ml-4">
+                                <div className="flex flex-col">
+                                    <label className="mb-2 font-semibold">Weight</label>
+                                    <Input type="number" min={0} max={100} step={1} className="border border-gray-300 rounded px-2 py-1" value={pairingOptions.vark?.weight || ""} onChange={(e) => setPairingOptions(prev => ({ ...prev, vark: { ...prev.vark, weight: e.target.value ? parseFloat(e.target.value) : 1 } }))} />
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={handleOpenSuggestPairings} disabled={loading}>{loading ? <Loader2 className="animate-spin" /> : "Suggest Pairing"}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
-    )
+    );
 };
 
 export default Page;

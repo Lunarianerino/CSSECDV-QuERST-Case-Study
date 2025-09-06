@@ -1,11 +1,14 @@
 "use server"
 import { connectToMongoDB } from "../db";
-import { Program } from "@/models";
+import { Program, SpecialExam } from "@/models";
 import { ProgramFormValues } from "@/lib/validations/program";
 import { authOptions } from "../auth";
 import { getServerSession } from "next-auth";
 import { AccountType } from "@/models/account";
 import { MongoServerError } from "mongodb";
+import { ExamTags } from "@/models/specialExam";
+import { BfiResultResponse, getBfiResultsAction } from "./bfiActions";
+import { getVarkResultsAction, VarkResultResponse } from "./varkActions";
 
 export interface ProgramsResponse {
     success: boolean;
@@ -59,7 +62,7 @@ export const getPrograms = async (): Promise<ProgramsResponse> => {
             data: processed_programs,
             status: 200
         };
-        
+
     } catch (error) {
         console.error("Error fetching programs:", error);
         return {
@@ -71,7 +74,7 @@ export const getPrograms = async (): Promise<ProgramsResponse> => {
 }
 
 // Post function
-export const createProgram = async (data: ProgramFormValues) : Promise<ProgramsResponse> => {
+export const createProgram = async (data: ProgramFormValues): Promise<ProgramsResponse> => {
     try {
         const session = await getServerSession(authOptions);
 
@@ -91,7 +94,7 @@ export const createProgram = async (data: ProgramFormValues) : Promise<ProgramsR
             success: true,
             status: 200
         };
-    } 
+    }
     catch (error) {
         if (error instanceof MongoServerError) {
             console.error("Error creating program:", error);
@@ -277,3 +280,342 @@ export const removePairing = async (programId: string, pairingId: string): Promi
         };
     }
 };
+
+type ToggleWeight = {
+    enabled?: boolean;
+    weight?: number;
+};
+
+export type PairingOptions = {
+    maxStudentsPerTutor?: number;
+    bfi?: ToggleWeight;
+    vark?: ToggleWeight;
+};
+
+const defaultOptions = {
+    bfi: { enabled: true, weight: 1 },
+    vark: { enabled: true, weight: 1 },
+} as const;
+
+export interface PairingSuggestion {
+    matched: boolean;
+    tutorId?: string | null;
+    studentId?: string | null;
+    similarity?: number | null;
+    reason?: string | null;
+}
+
+interface VariableResults {
+    id: string;
+    bfiResults: BfiResultResponse | null;
+    varkResults: VarkResultResponse | null;
+}
+
+export interface SuggestPairingsResponse {
+    success: boolean;
+    data?: PairingSuggestion[];
+    error?: string;
+    status: number;
+}
+
+export const suggestPairings = async (programId: string, options: PairingOptions = {}): Promise<SuggestPairingsResponse> => {
+    try {
+        const merged: PairingOptions = {
+            maxStudentsPerTutor: options.maxStudentsPerTutor ?? 1, //! Not yet implemented
+            bfi: { ...defaultOptions.bfi, ...options.bfi },
+            vark: { ...defaultOptions.vark, ...options.vark },
+        };
+        options = merged;
+
+        console.log("Suggesting pairings with options:", options);
+
+        const session = await getServerSession(authOptions);
+
+        if (!session || session.user?.type !== AccountType.ADMIN) {
+            return {
+                success: false,
+                error: "Unauthorized",
+                status: 401
+            }
+        }
+
+        await connectToMongoDB();
+        const program = await Program.findById(programId).populate({
+            path: "participants",
+            model: "Account",
+            select: "_id type"
+        });
+
+        if (!program) {
+            return {
+                success: false,
+                error: "Program not found",
+                status: 404
+            };
+        }
+
+        // Implement your pairing suggestion logic here
+        console.log(program);
+
+        // Step 1: Retrieve user accounts
+        const userAccounts = program.participants;
+
+        // Step 2: Retrieve the BFI and VARK
+        const specialExams = await SpecialExam.find({});
+
+        const VARKExam = specialExams.find((exam) => exam.tag.includes(ExamTags.VARK));
+        const BFIExam = specialExams.find((exam) => exam.tag.includes(ExamTags.BFI));
+
+        if (!VARKExam || !BFIExam) {
+            return {
+                success: false,
+                error: "VARK or BFI exam not found",
+                status: 404
+            };
+        }
+
+        // Step 3: Iterate through each participant
+        const tutors = userAccounts.filter(user => user.type === AccountType.TUTOR);
+        const students = userAccounts.filter(user => user.type === AccountType.STUDENT);
+
+        // Step 4: Get BFI and VARK results of each tutor and student
+        let tutorList: VariableResults[] = []
+        let studentList: VariableResults[] = []
+
+        let pairingResults: PairingSuggestion[] = []
+
+        for (const tutor of tutors) {
+            let bfiResults: BfiResultResponse | null = null;
+            let varkResults: VarkResultResponse | null = null;
+            try {
+                bfiResults = options.bfi?.enabled ? await getBfiResultsAction(tutor._id) : null;
+            } catch (error) {
+                console.error("Error getting BFI results for tutor:", tutor._id, error);
+                bfiResults = null;
+            }
+
+            try {
+                varkResults = options.vark?.enabled ? await getVarkResultsAction(tutor._id) : null;
+            } catch (error) {
+                console.error("Error getting VARK results for tutor:", tutor._id, error);
+                varkResults = null;
+            }
+
+            // Vectorize the results
+            tutorList.push({
+                id: tutor._id,
+                bfiResults: bfiResults,
+                varkResults: varkResults
+            });
+        }
+        console.log(tutorList);
+        for (const student of students) {
+            let bfiResults: BfiResultResponse | null = null;
+            let varkResults: VarkResultResponse | null = null;
+            try {
+                bfiResults = options.bfi?.enabled ? await getBfiResultsAction(student._id) : null;
+            } catch (error) {
+                console.error("Error getting BFI results for student:", student._id, error);
+                bfiResults = null;
+            }
+
+            try {
+                varkResults = options.vark?.enabled ? await getVarkResultsAction(student._id) : null;
+            } catch (error) {
+                console.error("Error getting VARK results for student:", student._id, error);
+                varkResults = null;
+            }
+
+
+
+            studentList.push({
+                id: student._id,
+                bfiResults,
+                varkResults
+            });
+        }
+
+        //TODO: Sort the students by grades (worst to best)
+        //TODO: Tutor pairing limit
+
+        // Clean tutor results (remove invalid tutors with errors)
+        for (const tutor of tutorList) {
+            let hasError = false;
+            let reasons: string[] = [];
+
+            if (options.bfi?.enabled && (!tutor.bfiResults || !tutor.bfiResults.success)) {
+                hasError = true;
+                reasons.push(tutor.bfiResults ? tutor.bfiResults.message : "BFI results not found");
+            }
+
+            if (options.vark?.enabled && (!tutor.varkResults || !tutor.varkResults.success)) {
+                hasError = true;
+                reasons.push(tutor.varkResults ? tutor.varkResults.message : "VARK results not found");
+            }
+
+            if (hasError) {
+                pairingResults.push({
+                    matched: !hasError,
+                    tutorId: tutor.id.toString(),
+                    studentId: null,
+                    similarity: null,
+                    reason: reasons.join("; ")
+                });
+
+                console.log("Removing tutor due to error:", tutor.id, reasons.join("; "));
+                tutorList = tutorList.filter(t => t.id !== tutor.id);
+            }
+        }
+
+        // Clean student results (remove invalid students with errors)
+        for (const student of studentList) {
+            let hasError = false;
+            let reasons: string[] = [];
+
+            if ((options.bfi?.enabled && (!student.bfiResults || !student.bfiResults.success))) {
+                hasError = true;
+                reasons.push(student.bfiResults ? student.bfiResults.message : "BFI results not found");
+            }
+
+            if ((options.vark?.enabled && (!student.varkResults || !student.varkResults.success))) {
+                hasError = true;
+                reasons.push(student.varkResults ? student.varkResults.message : "VARK results not found");
+            }
+
+            if (hasError) {
+                pairingResults.push({
+                    matched: !hasError,
+                    tutorId: null,
+                    studentId: student.id.toString(),
+                    similarity: null,
+                    reason: reasons.join("; ")
+                });
+                console.log("Removing student due to error:", student.id, reasons.join("; "));
+                studentList = studentList.filter(s => s.id !== student.id);
+            }
+        }
+        console.log(studentList);
+
+        for (const student of studentList) {
+            // Initial check: If tutor list is empty, let's not waste time
+            if (tutorList.length <= 0) {
+                pairingResults.push({
+                    matched: false,
+                    tutorId: null,
+                    studentId: student.id.toString(),
+                    similarity: null,
+                    reason: "No available tutors"
+                });
+                continue;
+            }
+
+            const studentVector = vectorizeResults(student, options);
+            let potentialMatches: { tutorId: string; similarity: number }[] = [];
+
+            //! This section forward is completely untested
+            for (const tutor of tutorList) {
+                const tutorVector = vectorizeResults(tutor, options);
+                const similarity = calculateSimilarity(tutorVector, studentVector);
+                potentialMatches.push({ tutorId: tutor.id, similarity });
+            }
+            potentialMatches.sort((a, b) => b.similarity - a.similarity);
+            console.log("Potential Matches for student", student.id, potentialMatches);
+
+            // Select the top 1, if available.
+            if (potentialMatches.length > 0) {
+                const bestMatch = potentialMatches[0];
+                pairingResults.push({
+                    matched: true,
+                    tutorId: bestMatch.tutorId.toString(),
+                    studentId: student.id.toString(),
+                    similarity: bestMatch.similarity,
+                    reason: null
+                });
+
+                //? This would be a good section to implement tutor pair limit logic.
+                // Remove the matched tutor from the list
+                tutorList = tutorList.filter(t => t.id !== bestMatch.tutorId);
+            } else {
+                // Unlikely, but just in case
+                pairingResults.push({
+                    matched: false,
+                    tutorId: null,
+                    studentId: student.id.toString(),
+                    similarity: null,
+                    reason: "No suitable tutor found"
+                });
+            }
+        }
+
+        return {
+            success: true,
+            data: pairingResults,
+            status: 200
+        };
+    } catch (error) {
+        console.error("Error suggesting pairings:", error);
+        return {
+            success: false,
+            error: "Internal Server Error",
+            status: 500
+        };
+    }
+};
+
+/**
+ * Calculates the cosine similarity between two vectors
+ * @param vecA First vector
+ * @param vecB Second vector
+ * @returns A value between -1 and 1, where 1 means identical
+ * @source https://alexop.dev/posts/how-to-implement-a-cosine-similarity-function-in-typescript-for-vector-comparison/
+ */
+function calculateSimilarity(vecA: number[], vecB: number[]): number {
+    // Cosine Similarity
+    if (vecA.length !== vecB.length) {
+        throw new Error("Vectors must have the same dimensions");
+    }
+
+    // Calculate dot product: A·B = Σ(A[i] * B[i])
+    const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+
+    // Calculate magnitudes using Math.hypot()
+    const magnitudeA = Math.hypot(...vecA);
+    const magnitudeB = Math.hypot(...vecB);
+
+    // Check for zero magnitude
+    if (magnitudeA === 0 || magnitudeB === 0) {
+        return 0;
+    }
+
+    // Calculate cosine similarity: (A·B) / (|A|*|B|)
+    return dotProduct / (magnitudeA * magnitudeB);
+}
+
+function vectorizeResults(participant: VariableResults, options: PairingOptions): number[] {
+    const vector: number[] = [];
+    if (options.vark?.enabled && participant.varkResults?.data) {
+        const varkWeight = options.vark.weight ?? 1;
+        //? Normalize?
+        vector.push(
+            participant.varkResults.data.Visual * varkWeight,
+            participant.varkResults.data.Auditory * varkWeight,
+            participant.varkResults.data["Read/Write"] * varkWeight,
+            participant.varkResults.data.Kinesthetic * varkWeight
+        );
+    }
+    // Push other results (e.g., BFI) into the vector
+    if (options.bfi?.enabled && participant.bfiResults?.data) {
+        const bfiWeight = options.bfi.weight ?? 1;
+        //? Normalize?
+        vector.push(
+            participant.bfiResults.data.Openness * bfiWeight,
+            participant.bfiResults.data.Conscientiousness * bfiWeight,
+            participant.bfiResults.data.Extroversion * bfiWeight,
+            participant.bfiResults.data.Agreeableness * bfiWeight,
+            participant.bfiResults.data.Neuroticism * bfiWeight
+        );
+    }
+
+
+    return vector;
+}

@@ -107,7 +107,7 @@ export async function getAllUsers() : Promise<BasicAccountInfo[]>{
         onboarded: user.onboarded
       }
     })
-
+    console.log("Formatted Users:", formattedUsers);
     return formattedUsers;
 
   } catch (error) {
