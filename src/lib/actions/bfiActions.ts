@@ -17,6 +17,7 @@ import { BFIAttributes } from "@/models/bfi";
 import { ExamTypes } from "@/models/exam";
 import { ExamTags } from "@/models/specialExam";
 import mongoose from "mongoose";
+import { UserExamStatus } from "@/models/examStatus";
 
 // Interface for the BFI mapping data
 export interface BfiMapping {
@@ -277,10 +278,13 @@ export async function getBfiResultsAction(
       .sort({ attemptNumber: -1 })
       .limit(1);
     if (!userExam) {
-      return { success: false, message: "User exam not found", data: null };
+      return { success: false, message: "User BFI exam not found", data: null };
     }
 
     // console.log(userExam[0].answers);
+    if (userExam[0].status !== UserExamStatus.FINISHED) {
+      return { success: false, message: "User BFI exam not finished", data: null };
+    }
 
     userExam[0].answers.forEach((answer: any) => {
       if (bfiQuestionIds.includes(answer.questionId.toString())) {
