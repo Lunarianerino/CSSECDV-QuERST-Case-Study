@@ -49,6 +49,7 @@ export function DataTable<TData, TValue>({
     onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
+    autoResetPageIndex: false,
     state: {
       globalFilter,
       rowSelection,
