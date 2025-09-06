@@ -214,7 +214,7 @@ export async function getVarkResultsAction(userId: string):Promise<VarkResultRes
       model: "ExamAnswers",
     }).sort({ attemptNumber: -1 }).limit(1);
 
-    if (!userAnswers) {
+    if (!userAnswers || userAnswers.length === 0) {
       return { success: false, message: "User VARK exam not found", data: null };
     }
 

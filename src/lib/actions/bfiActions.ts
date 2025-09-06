@@ -277,7 +277,7 @@ export async function getBfiResultsAction(
       })
       .sort({ attemptNumber: -1 })
       .limit(1);
-    if (!userExam) {
+    if (!userExam || userExam.length === 0) {
       return { success: false, message: "User BFI exam not found", data: null };
     }
 
