@@ -275,13 +275,16 @@ const Page = () => {
             </DashboardLayout>
 
             <Dialog open={isAssignOpen} onOpenChange={setAssignOpen}>
-                <DialogContent>
+                <DialogContent className="min-w-4xl">
                     <DialogHeader>
                         <DialogTitle>
                             Assign Users to {selectedProgram?.title}
                         </DialogTitle>
                     </DialogHeader>
-                    <DataTable columns={participantSelectColumns} data={usersData?.filter(user => !selectedProgram?.participants.find(p => p === user.id)) || []} onSelectionChange={setSelectedUsers}></DataTable>
+                    <div className="min-w-0">
+                        <DataTable columns={participantSelectColumns} data={usersData?.filter(user => !selectedProgram?.participants.find(p => p === user.id)) || []} onSelectionChange={setSelectedUsers}></DataTable>
+
+                    </div>
                     <DialogFooter>
                         <Button onClick={() => setAssignOpen(false)} variant="outline">Cancel</Button>
                         <Button onClick={handleAssignUsers} disabled={selectedUsers.length === 0 || isAssigning}>

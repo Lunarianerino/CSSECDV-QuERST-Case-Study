@@ -121,21 +121,21 @@ const getNavigationData = (userType: string | undefined) => {
         },
       ]
     },
-    {
-      title: "Settings",
-      url: "/admin/settings",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "/admin/settings",
-        },
-        {
-          title: "System",
-          url: "/admin/settings/system",
-        },
-      ],
-    },
+    // {
+    //   title: "Settings",
+    //   url: "/admin/settings",
+    //   icon: Settings2,
+    //   items: [
+    //     {
+    //       title: "General",
+    //       url: "/admin/settings",
+    //     },
+    //     {
+    //       title: "System",
+    //       url: "/admin/settings/system",
+    //     },
+    //   ],
+    // },
   ]
 
   // Tutor navigation

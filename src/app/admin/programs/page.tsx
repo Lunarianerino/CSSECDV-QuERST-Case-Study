@@ -5,7 +5,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns/format";
 import { CalendarIcon, CheckIcon, ChevronDownIcon, Loader2, SquarePlus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -24,6 +24,8 @@ const Page = () => {
         queryKey: ['programs'],
         queryFn: getPrograms
     });
+
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         if (programsData) {
@@ -79,6 +81,7 @@ const Page = () => {
                 id: "create-program",
             });
             form.reset();
+            queryClient.invalidateQueries({ queryKey: ['programs'] });
             setIsCreateProgramOpen(false);
         }
     }, [isSuccess]);
