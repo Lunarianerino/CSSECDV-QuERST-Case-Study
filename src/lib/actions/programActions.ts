@@ -318,14 +318,15 @@ export interface SuggestPairingsResponse {
     status: number;
 }
 
+export interface SuggestSimilarityResponse {
+    success: boolean;
+    data?: PairingSuggestion;
+    error?: string;
+    status: number;
+}
 export const suggestPairings = async (programId: string, options: PairingOptions = {}): Promise<SuggestPairingsResponse> => {
     try {
-        const merged: PairingOptions = {
-            maxStudentsPerTutor: options.maxStudentsPerTutor ?? 1, //! Not yet implemented
-            bfi: { ...defaultOptions.bfi, ...options.bfi },
-            vark: { ...defaultOptions.vark, ...options.vark },
-        };
-        options = merged;
+        options = getPairingOptions(options)
 
         console.log("Suggesting pairings with options:", options);
 
@@ -385,54 +386,15 @@ export const suggestPairings = async (programId: string, options: PairingOptions
         let pairingResults: PairingSuggestion[] = []
 
         for (const tutor of tutors) {
-            let bfiResults: BfiResultResponse | null = null;
-            let varkResults: VarkResultResponse | null = null;
-            try {
-                bfiResults = options.bfi?.enabled ? await getBfiResultsAction(tutor._id) : null;
-            } catch (error) {
-                console.error("Error getting BFI results for tutor:", tutor._id, error);
-                bfiResults = null;
-            }
-
-            try {
-                varkResults = options.vark?.enabled ? await getVarkResultsAction(tutor._id) : null;
-            } catch (error) {
-                console.error("Error getting VARK results for tutor:", tutor._id, error);
-                varkResults = null;
-            }
-
-            // Vectorize the results
-            tutorList.push({
-                id: tutor._id,
-                bfiResults: bfiResults,
-                varkResults: varkResults
-            });
+            tutorList.push(
+                await getParticipantResults(tutor._id.toString(), options)
+            );
         }
-        console.log(tutorList);
+        
         for (const student of students) {
-            let bfiResults: BfiResultResponse | null = null;
-            let varkResults: VarkResultResponse | null = null;
-            try {
-                bfiResults = options.bfi?.enabled ? await getBfiResultsAction(student._id) : null;
-            } catch (error) {
-                console.error("Error getting BFI results for student:", student._id, error);
-                bfiResults = null;
-            }
-
-            try {
-                varkResults = options.vark?.enabled ? await getVarkResultsAction(student._id) : null;
-            } catch (error) {
-                console.error("Error getting VARK results for student:", student._id, error);
-                varkResults = null;
-            }
-
-
-
-            studentList.push({
-                id: student._id,
-                bfiResults,
-                varkResults
-            });
+            studentList.push(
+                await getParticipantResults(student._id.toString(), options)
+            );
         }
 
         //TODO: Sort the students by grades (worst to best)
@@ -440,28 +402,16 @@ export const suggestPairings = async (programId: string, options: PairingOptions
 
         // Clean tutor results (remove invalid tutors with errors)
         for (const tutor of tutorList) {
-            let hasError = false;
-            let reasons: string[] = [];
-
-            if (options.bfi?.enabled && (!tutor.bfiResults || !tutor.bfiResults.success)) {
-                hasError = true;
-                reasons.push(tutor.bfiResults ? tutor.bfiResults.message : "BFI results not found");
-            }
-
-            if (options.vark?.enabled && (!tutor.varkResults || !tutor.varkResults.success)) {
-                hasError = true;
-                reasons.push(tutor.varkResults ? tutor.varkResults.message : "VARK results not found");
-            }
-
-            if (hasError) {
+            const {valid, reasons} = cleanParticipantResults(tutor, options, "tutor");
+            
+            if (!valid) {
                 pairingResults.push({
-                    matched: !hasError,
+                    matched: !valid,
                     tutorId: tutor.id.toString(),
                     studentId: null,
                     similarity: null,
                     reason: reasons.join("; ")
                 });
-
                 console.log("Removing tutor due to error:", tutor.id, reasons.join("; "));
                 tutorList = tutorList.filter(t => t.id !== tutor.id);
             }
@@ -469,22 +419,11 @@ export const suggestPairings = async (programId: string, options: PairingOptions
 
         // Clean student results (remove invalid students with errors)
         for (const student of studentList) {
-            let hasError = false;
-            let reasons: string[] = [];
+            const { valid, reasons } = cleanParticipantResults(student, options, "student");
 
-            if ((options.bfi?.enabled && (!student.bfiResults || !student.bfiResults.success))) {
-                hasError = true;
-                reasons.push(student.bfiResults ? student.bfiResults.message : "BFI results not found");
-            }
-
-            if ((options.vark?.enabled && (!student.varkResults || !student.varkResults.success))) {
-                hasError = true;
-                reasons.push(student.varkResults ? student.varkResults.message : "VARK results not found");
-            }
-
-            if (hasError) {
+            if (!valid) {
                 pairingResults.push({
-                    matched: !hasError,
+                    matched: !valid,
                     tutorId: null,
                     studentId: student.id.toString(),
                     similarity: null,
@@ -562,6 +501,125 @@ export const suggestPairings = async (programId: string, options: PairingOptions
     }
 };
 
+export const confirmSuggestedPairings = async (programId: string, pairings: PairingSuggestion[]): Promise<ProgramsResponse> => {
+    try {
+        const session = await getServerSession(authOptions);
+
+        if (!session || session.user?.type !== AccountType.ADMIN) {
+            return {
+                success: false,
+                error: "Unauthorized",
+                status: 401
+            }
+        }
+
+        await connectToMongoDB();
+        const program = await Program.findById(programId);
+
+        if (!program) {
+            return {
+                success: false,
+                error: "Program not found",
+                status: 404
+            };
+        }
+
+        // Filter out invalid pairings
+        const validPairings = pairings.filter(p => p.matched && p.tutorId && p.studentId);
+
+        // Add new pairings to the program
+        for (const pairing of validPairings) {
+            // Avoid duplicates
+            const exists = program.pairings.some(p => p.tutor.toString() === pairing.tutorId && p.student.toString() === pairing.studentId);
+            if (!exists) {
+                program.pairings.push({ tutor: pairing.tutorId!, student: pairing.studentId! });
+            }
+        }
+
+        await program.save();
+
+        return {
+            success: true,
+            status: 200
+        };
+    } catch (error) {
+        console.error("Error confirming pairings:", error);
+        return {
+            success: false,
+            error: "Internal Server Error",
+            status: 500
+        };
+    }
+};
+export const getSimilarity = async (tutorId: string, studentId: string, options: PairingOptions = {}): Promise<SuggestSimilarityResponse> => {
+    try {
+        options = getPairingOptions(options);
+        console.log("Calculating similarity with options:", options);
+
+        const session = await getServerSession(authOptions);
+        
+        if (!session || session.user?.type !== AccountType.ADMIN) {
+            return {
+                success: false,
+                error: "Unauthorized",
+                status: 401
+            }
+        }
+        
+        await connectToMongoDB();
+        const pairingSuggestion: PairingSuggestion = {
+            matched: true,
+            tutorId,
+            studentId,
+            similarity: null,
+            reason: null
+        };
+        const tutorResults = await getParticipantResults(tutorId, options);
+        const studentResults = await getParticipantResults(studentId, options);
+
+        const tutorClean = cleanParticipantResults(tutorResults, options, "tutor");
+        const studentClean = cleanParticipantResults(studentResults, options, "student");
+
+        if (!tutorClean.valid || !studentClean.valid) {
+            pairingSuggestion.matched = false;
+            pairingSuggestion.similarity = null;
+            pairingSuggestion.reason = (!tutorClean.valid ? `Tutor results invalid: [${tutorClean.reasons.join("; ")}]` : "") +
+                (!tutorClean.valid && !studentClean.valid ? " | " : "") +
+                (!studentClean.valid ? `Student results invalid: [${studentClean.reasons.join("; ")}]` : "");
+            return {
+                success: false,
+                error: pairingSuggestion.reason,
+                status: 400,
+                data: pairingSuggestion
+            };
+        }
+
+        const tutorVector = vectorizeResults(tutorResults, options);
+        const studentVector = vectorizeResults(studentResults, options);
+
+        console.log("Tutor Vector:", tutorVector);
+        console.log("Student Vector:", studentVector);
+        
+        const similarity = calculateSimilarity(tutorVector, studentVector);
+
+        pairingSuggestion.similarity = similarity;
+
+        return {
+            success: true,
+            data: pairingSuggestion,
+            status: 200
+        };
+    } catch (error) {
+        console.error("Error calculating similarity:", error);
+        return {
+            success: false,
+            error: "Internal Server Error",
+            status: 500
+        };
+    }
+}
+
+
 /**
  * Calculates the cosine similarity between two vectors
  * @param vecA First vector
@@ -618,4 +676,55 @@ function vectorizeResults(participant: VariableResults, options: PairingOptions)
 
 
     return vector;
+}
+
+function getPairingOptions(options: PairingOptions) {
+    const merged: PairingOptions = {
+        maxStudentsPerTutor: options.maxStudentsPerTutor ?? 1, //! Not yet implemented
+        bfi: { ...defaultOptions.bfi, ...options.bfi },
+        vark: { ...defaultOptions.vark, ...options.vark },
+    };
+    return merged;
+}
+
+async function getParticipantResults(participantId: string, options: PairingOptions): Promise<VariableResults> {
+
+    const results: VariableResults = {
+        id: participantId,
+        varkResults: null,
+        bfiResults: null
+    };
+
+    try {
+        results.bfiResults = options.bfi?.enabled ? await getBfiResultsAction(participantId) : null;
+    } catch (error) {
+        console.error("Error getting BFI results for participant:", participantId, error);
+        results.bfiResults = null;
+    }
+
+    try {
+        results.varkResults = options.vark?.enabled ? await getVarkResultsAction(participantId) : null;
+    } catch (error) {
+        console.error("Error getting VARK results for participant:", participantId, error);
+        results.varkResults = null;
+    }
+
+    return results;
+}
+
+function cleanParticipantResults(participant: VariableResults, options: PairingOptions, participant_type: string): { valid: boolean; reasons: string[] } {
+    let valid = true;
+    let reasons: string[] = [];
+
+    if (options.bfi?.enabled && (!participant.bfiResults || !participant.bfiResults.success)) {
+        valid = false;
+        reasons.push(participant.bfiResults ? participant.bfiResults.message : "BFI results not found");
+    }
+
+    if (options.vark?.enabled && (!participant.varkResults || !participant.varkResults.success)) {
+        valid = false;
+        reasons.push(participant.varkResults ? participant.varkResults.message : "VARK results not found");
+    }
+
+    return { valid, reasons };
 }

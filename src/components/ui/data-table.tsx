@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   ColumnDef,
@@ -27,24 +27,42 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
-  onSelectionChange?: (selected: TData[]) => void
+  onSelectionChange?: (selected: TData[]) => void,
+  enableSearch?: boolean
+  pageSize?: number
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   onSelectionChange,
+  enableSearch = true,
+  pageSize = 10
 }: DataTableProps<TData, TValue>) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
   const [globalFilter, setGlobalFilter] = React.useState<string>("")
   const [rowSelection, setRowSelection] = React.useState({})
+  const tableColumns = React.useMemo(() => columns, [columns])
+  const [tableData, setTableData] = React.useState(() => data)
+  React.useEffect(() => {
+    setTableData(data)
+  }, [data])
+
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: pageSize,
+  })
+  const handleClearSelection = () => {
+    table.resetRowSelection(); // Clears all selected rows
+  };
   const table = useReactTable({
-    data,
-    columns,
+    data: tableData,
+    columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    onPaginationChange: setPagination,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
@@ -53,6 +71,7 @@ export function DataTable<TData, TValue>({
     state: {
       globalFilter,
       rowSelection,
+      pagination
     },
   })
 
@@ -64,17 +83,20 @@ export function DataTable<TData, TValue>({
       .map(r => r.original as TData)
     onSelectionChange(selected)
   }, [rowSelection, table, onSelectionChange])
-  
+
   return (
     <div>
-      <div className="flex items-center py-4 gap-2">
-        <Input
-          placeholder="Search…"
-          value={(table.getState().globalFilter as string) ?? ""}
-          onChange={(e) => table.setGlobalFilter(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
+      {
+        enableSearch &&
+        <div className="flex items-center py-4 gap-2">
+          <Input
+            placeholder="Search…"
+            value={(table.getState().globalFilter as string) ?? ""}
+            onChange={(e) => table.setGlobalFilter(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+      }
       {/* <div className="text-muted-foreground flex-1 text-sm">
         {table.getFilteredSelectedRowModel().rows.length} of{" "}
         {table.getFilteredRowModel().rows.length} row(s) selected.
@@ -101,8 +123,8 @@ export function DataTable<TData, TValue>({
 
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+            {table.getPaginationRowModel().rows?.length ? (
+              table.getPaginationRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
@@ -142,6 +164,11 @@ export function DataTable<TData, TValue>({
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
+
+        <Button variant="outline" size="sm" onClick={handleClearSelection}>
+          Clear Selection
+        </Button>
+
       </div>
     </div>
 

@@ -15,13 +15,13 @@ import { Button } from "@/components/ui/button";
 import Combobox from "@/components/ui/combobox";
 import { DataTable } from "@/components/ui/data-table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { createPairing, getPrograms, PairingOptions, PairingSuggestion, ProgramData, removePairing, suggestPairings } from "@/lib/actions/programActions";
+import { confirmSuggestedPairings, createPairing, getPrograms, getSimilarity, PairingOptions, PairingSuggestion, ProgramData, removePairing, suggestPairings } from "@/lib/actions/programActions";
 import { getAllUsers } from "@/lib/actions/userActions";
 import { AccountType } from "@/models/account";
 import { BasicAccountInfo } from "@/types/accounts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { Loader2, Plus, StarsIcon, TrashIcon } from "lucide-react";
+import { Loader2, Plus, RefreshCw, StarsIcon, TrashIcon } from "lucide-react";
 import { set } from "mongoose";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -98,7 +98,7 @@ const Page = () => {
         }
     ];
     const suggestPairingColumns: ColumnDef<PairingSuggestion>[] = [
-                {
+        {
             id: "select",
             header: ({ table }) => (
                 <Checkbox
@@ -119,45 +119,79 @@ const Page = () => {
             ),
         },
         {
+            id: "refresh",
+            header: ({ table }) => (
+                <HoverCard>
+                    <HoverCardTrigger>
+                        Refresh
+                    </HoverCardTrigger>
+                    <HoverCardContent>
+                        <p>Refresh similarity for this tutor-student pair. Ideally used when the pairing has changed.</p>
+                    </HoverCardContent>
+                </HoverCard>
+            ),
+            cell: ({ row }) => (
+                <RefreshCw className="cursor-pointer" onClick={() => handleRefresh(row.index)} />
+            )
+
+        },
+        {
             header: "Tutor",
             accessorKey: "tutorId",
             cell: ({ row }) => (
-                <HoverCard>
-                    <HoverCardTrigger>
-                        {getBasicAccountInfo(row.getValue("tutorId")!)?.name ?? "--"}
-                    </HoverCardTrigger>
-                    <HoverCardContent>
-                        <p>{getBasicAccountInfo(row.getValue("tutorId")!)?.email ?? "--"}</p>
-                    </HoverCardContent>
-                </HoverCard>
+                <Combobox value={row.getValue("tutorId")} schema={programParticipants.filter(u => u.type === AccountType.TUTOR).map(
+                    u => ({ value: u.id, label: u.name })
+                )} onChange={(value) => {
+                    setPairingSuggestions((prev) => (
+                        [
+                            ...prev.slice(0, row.index),
+                            {
+                                ...prev[row.index],
+                                tutorId: value
+                            },
+                            ...prev.slice(row.index + 1)
+                        ]
+                    ))
+                }} placeholder="No Tutor" />
             )
         },
         {
             header: "Student",
             accessorKey: "studentId",
             cell: ({ row }) => (
-                <HoverCard>
-                    <HoverCardTrigger>
-                        {getBasicAccountInfo(row.getValue("studentId")!)?.name ?? "--"}
-                    </HoverCardTrigger>
-                    <HoverCardContent>
-                        <p>{getBasicAccountInfo(row.getValue("studentId")!)?.email ?? "--"}</p>
-                    </HoverCardContent>
-                </HoverCard>
+                <Combobox value={row.getValue("studentId")} schema={programParticipants.filter(u => u.type === AccountType.STUDENT).map(
+                    u => ({ value: u.id, label: u.name })
+                )} onChange={(value) => {
+                    setPairingSuggestions((prev) => (
+                        [
+                            ...prev.slice(0, row.index),
+                            {
+                                ...prev[row.index],
+                                studentId: value
+                            },
+                            ...prev.slice(row.index + 1)
+                        ]
+                    ))
+                }} placeholder="No Student" />
             )
         },
         {
             header: "Similarity",
             accessorKey: "similarity",
             cell: ({ row }) => (
-                row.getValue("similarity") ? parseFloat(row.getValue("similarity")!).toFixed(2) : "--"
+
+                <>
+                    {(refreshingIndices.includes(row.index)) ? <Loader2 className="h-4 w-4 animate-spin" /> : row.getValue("similarity") ? ((row.getValue("similarity")! as number) * 100).toFixed(2) + "%" : "--"}
+                </>
             )
         },
         {
             header: "Reason",
             accessorKey: "reason",
             cell: ({ row }) => (
-                row.getValue("reason") ? (row.getValue("reason")!) : "--"
+                <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>
+                    {row.getValue("reason") ? (row.getValue("reason")! as string).replaceAll("; ", ",\n") : "--"}
+                </pre>
             )
         }
     ];
@@ -168,9 +202,21 @@ const Page = () => {
     const [programParticipants, setProgramParticipants] = useState<BasicAccountInfo[]>([]);
     const [selectedTutor, setSelectedTutor] = useState<BasicAccountInfo | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<BasicAccountInfo | null>(null);
+    const [refreshingIndices, setRefreshingIndices] = useState<number[]>([]);
 
     const [pairingSuggestions, setPairingSuggestions] = useState<PairingSuggestion[]>([]);
-    const [pairingOptions, setPairingOptions] = useState<PairingOptions>({});
+    const [selectedSuggestions, setSelectedSuggestions] = useState<PairingSuggestion[]>([]);
+    const [pairingOptions, setPairingOptions] = useState<PairingOptions>({
+        maxStudentsPerTutor: 3,
+        bfi: {
+            enabled: false,
+            weight: 1
+        },
+        vark: {
+            enabled: false,
+            weight: 1
+        }
+    });
 
     const [isCreatePairingOpen, setCreatePairingOpen] = useState(false);
     const [isSuggestPairingsOpen, setSuggestPairingsOpen] = useState(false);
@@ -194,6 +240,8 @@ const Page = () => {
     const { mutateAsync: createPairingAsync, isPending: isCreating, isError: isCreateError, isSuccess: isCreateSuccess, error: createError } = useMutation({
         mutationKey: ['createPairing'],
         mutationFn: async ({ programId, tutorId, studentId }: { programId: string; tutorId: string; studentId: string }) => {
+            toast.loading("Creating pairing...", { id: "create_pairing" });
+
             const res = await createPairing(programId, tutorId, studentId);
 
             if (!res.success) {
@@ -207,18 +255,21 @@ const Page = () => {
             // console.log("Pairing created successfully:", data);
             queryClient.invalidateQueries({ queryKey: ['programs'] });
             setCreatePairingOpen(false);
+            toast.success("Pairing created successfully", { id: "create_pairing" });
         },
 
         onError: (error) => {
             // console.error("Error creating pairing:", error);
+            toast.error("Error creating pairing: " + error.message, { id: "create_pairing" });
+
         }
     });
 
     const { mutateAsync: removePairingAsync, isPending: isRemoving, isError: isRemoveError, isSuccess: isRemoveSuccess, error: removeError } = useMutation({
         mutationKey: ['removePairing'],
         mutationFn: async ({ programId, pairingId }: { programId: string; pairingId: string }) => {
+            toast.loading("Removing pairing...", { id: "remove_pairing" });
             const res = await removePairing(programId, pairingId);
-
             if (!res.success) {
                 throw new Error(res.error);
             }
@@ -228,9 +279,11 @@ const Page = () => {
 
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['programs'] });
+            toast.success("Pairing removed successfully", { id: "remove_pairing" });
         },
 
         onError: (error) => {
+            toast.error("Error removing pairing: " + error.message, { id: "remove_pairing" });
 
         }
     });
@@ -238,6 +291,7 @@ const Page = () => {
     const { mutateAsync: suggestPairingsAsync, isPending: isSuggesting, isError: isSuggestError, isSuccess: isSuggestSuccess, error: suggestError } = useMutation({
         mutationKey: ['suggestPairings'],
         mutationFn: async (programId: string) => {
+            toast.loading("Loading suggestions...", { id: "suggest_pairings" });
             const res = await suggestPairings(programId, pairingOptions);
 
             if (!res.success) {
@@ -249,13 +303,83 @@ const Page = () => {
 
         onSuccess: (result) => {
             setPairingSuggestions(result.data || []);
+            setSelectedSuggestions([]);
+            toast.success("Suggestions loaded", { id: "suggest_pairings" });
         },
 
         onError: (error) => {
-
+            toast.error("Error loading suggestions: " + error.message, { id: "suggest_pairings" });
         }
     });
 
+    const { mutateAsync: refreshPairingsAsync, isPending: isRefreshing, isError: isRefreshError, isSuccess: isRefreshSuccess, error: refreshError } = useMutation({
+        mutationKey: ['refreshPairings'],
+        mutationFn: async ({ tutorId, studentId }: { tutorId: string; studentId: string }) => {
+            toast.loading("Refreshing similarity...", { id: "refresh_similarity" });
+
+            const res = await getSimilarity(tutorId, studentId, pairingOptions);
+
+            if (res.status == 401) throw ("Unauthorized Action");
+            if (res.status == 500) throw ("Internal Server Error");
+
+            return res;
+        },
+
+        onSuccess: (result) => {
+            setPairingSuggestions((prev) => (
+                [
+                    ...prev.slice(0, prev.findIndex(p => p.tutorId === result.data?.tutorId && p.studentId === result.data?.studentId)),
+                    {
+                        ...prev[prev.findIndex(p => p.tutorId === result.data?.tutorId && p.studentId === result.data?.studentId)],
+                        similarity: result.data?.similarity,
+                        reason: result.data?.reason
+                    },
+                    ...prev.slice(prev.findIndex(p => p.tutorId === result.data?.tutorId && p.studentId === result.data?.studentId) + 1)
+                ]
+            ));
+            toast.success("Similarity refreshed", { id: "refresh_similarity" });
+        },
+
+        onError: (error) => {
+            toast.error("Error refreshing similarity: " + error, { id: "refresh_similarity" });
+        }
+    });
+
+    const { mutateAsync: confirmSelectedPairingsAsync, isPending: isConfirmingSelected, isError: isConfirmSelectedError, isSuccess: isConfirmSelectedSuccess, error: confirmSelectedError } = useMutation({
+        mutationKey: ['confirmSelectedPairings'],
+        mutationFn: async ({ programId, pairings }: { programId: string; pairings: PairingSuggestion[] }) => {
+            toast.loading("Accepting selected pairings...", { id: "confirm_selected_pairings" });
+            const res = await confirmSuggestedPairings(programId, pairings);
+            if (!res.success) {
+                throw new Error(res.error);
+            }
+
+            return res;
+        },
+        onSuccess: (data) => {
+            toast.success("Selected pairings accepted", { id: "confirm_selected_pairings" });
+            queryClient.invalidateQueries({ queryKey: ['programs'] });
+            setSelectedSuggestions([]);
+            setSuggestPairingsOpen(false);
+        },
+        onError: (error) => {
+            toast.error("Error accepting selected pairings: " + error, { id: "confirm_selected_pairings" });
+        }
+    })
+    const handleRefresh = async (index: number) => {
+        const pairing = pairingSuggestions[index];
+        if (!pairing.tutorId || !pairing.studentId) {
+            toast.error("Please select both tutor and student to refresh similarity.", { id: "refresh_similarity" });
+            return;
+        }
+        setRefreshingIndices((prev) => [...prev, index]);
+        await refreshPairingsAsync({ tutorId: pairing.tutorId, studentId: pairing.studentId });
+        setRefreshingIndices((prev) => prev.filter((i) => i !== index));
+    }
+    // debugging pairing suggestions
+    useEffect(() => {
+        console.log("Pairing suggestions:", pairingSuggestions);
+    }, [pairingSuggestions]);
     // Refresh program data
     useEffect(() => {
         if (!selectedProgram) return
@@ -264,46 +388,6 @@ const Page = () => {
             setSelectedProgram(updated)
         }
     }, [programs]);
-
-    useEffect(() => {
-        if (isCreateSuccess) {
-            toast.success("Pairing created successfully", { id: "create_pairing" });
-        }
-    }, [isCreateSuccess]);
-
-    useEffect(() => {
-        if (isCreateError) {
-            toast.error("Error creating pairing: " + createError.message, { id: "create_pairing" });
-        }
-    }, [isCreateError]);
-
-    useEffect(() => {
-        if (isCreating) {
-            toast.loading("Creating pairing...", { id: "create_pairing" });
-        }
-    }, [isCreating]);
-
-    useEffect(() => {
-        if (isRemoving) {
-            toast.loading("Removing pairing...", { id: "remove_pairing" });
-        }
-    }, [isRemoving]);
-
-    useEffect(() => {
-        if (isRemoveSuccess) {
-            toast.success("Pairing removed successfully", { id: "remove_pairing" });
-        }
-    }, [isRemoveSuccess]);
-
-    useEffect(() => {
-        if (isRemoveError) {
-            toast.error("Error removing pairing: " + removeError.message, { id: "remove_pairing" });
-        }
-    }, [isRemoveError]);
-
-    const getBasicAccountInfo = (id: string): BasicAccountInfo | undefined => {
-        return users.find(u => u.id === id);
-    };
 
     const handleProgramSelect = (programId: string) => {
         const program = programs.find(p => p.id === programId) || null;
@@ -359,9 +443,11 @@ const Page = () => {
 
     const handleAcceptPairings = async () => {
         if (!selectedProgram) return;
-
-        setLoading(true);
-        //TODO
+        confirmSelectedPairingsAsync({ programId: selectedProgram.id, pairings: pairingSuggestions });
+    };
+    const handleSelectedSuggestions = async () => {
+        if (!selectedProgram) return;
+        confirmSelectedPairingsAsync({ programId: selectedProgram.id, pairings: selectedSuggestions });
     };
     useEffect(() => {
         if (programsData) {
@@ -470,12 +556,15 @@ const Page = () => {
                         <center><Loader2 className="animate-spin" /></center>
                         : pairingSuggestions.length === 0 ? <div>No suggestions available.</div>
                             : <div className="flex flex-col gap-4 min-w-0">
-                                <DataTable columns={suggestPairingColumns} data={pairingSuggestions} />
+                                <DataTable columns={suggestPairingColumns} data={pairingSuggestions} enableSearch={false} pageSize={5} onSelectionChange={setSelectedSuggestions} />
                             </div>
                     }
                     <DialogFooter>
                         {!isSuggesting && pairingSuggestions.length > 0 &&
-                            <Button onClick={handleAcceptPairings} disabled={!selectedProgram || loading}>{loading ? <Loader2 className="animate-spin" /> : "Accept All"}</Button>
+                            <>
+                                <Button onClick={handleSelectedSuggestions} disabled={selectedSuggestions.length === 0 || !selectedProgram || isConfirmingSelected}>{isConfirmingSelected ? <><Loader2 className="animate-spin" /> "Applying Pairings..."</> : `Accept Selected (${selectedSuggestions.length})`}</Button>
+                                <Button onClick={handleAcceptPairings} disabled={!selectedProgram || isConfirmingSelected}>{isConfirmingSelected ? <> <Loader2 className="animate-spin" /> "Applying Pairings..."</> : "Accept All"}</Button>
+                            </>
                         }
 
                         {/* <Button onClick={handleSuggestPairings} disabled={!selectedProgram}>Suggest</Button> */}
