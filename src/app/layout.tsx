@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "QuERST-SyMM",
   description: "Find your next tutor today!",
+  icons: {
+    icon: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

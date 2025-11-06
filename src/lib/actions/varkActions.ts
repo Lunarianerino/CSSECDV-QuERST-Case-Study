@@ -9,6 +9,8 @@ import { VARKAttributes } from "@/models/vark";
 import { ExamTypes } from "@/models/exam";
 import mongoose from "mongoose";
 import { ExamTags } from "@/models/specialExam";
+import { User } from "lucide-react";
+import { UserExamStatus } from "@/models/examStatus";
 
 // Interface for the VARK mapping data
 export interface VarkMapping {
@@ -212,11 +214,15 @@ export async function getVarkResultsAction(userId: string):Promise<VarkResultRes
       model: "ExamAnswers",
     }).sort({ attemptNumber: -1 }).limit(1);
 
-    if (!userAnswers) {
-      throw new Error("User answers not found");
-    };
-    
+    if (!userAnswers || userAnswers.length === 0) {
+      return { success: false, message: "User VARK exam not found", data: null };
+    }
+
     const latestUserAnswer = userAnswers[0].answers;
+
+    if (userAnswers[0].status !== UserExamStatus.FINISHED) {
+      return { success: false, message: "User VARK exam not finished", data: null };
+    }
 
     // for every answer in latestUserAnswer, find the varkDetails that match the answerId and add the attribute to the varkResults object
     const varkResults: any = {
