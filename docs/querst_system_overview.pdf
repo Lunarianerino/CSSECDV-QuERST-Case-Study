@@ -1,0 +1,309 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 4 0 R 5 0 R 6 0 R] /Count 4 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 11 0 R >> >> /Contents 7 0 R >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 11 0 R >> >> /Contents 8 0 R >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 11 0 R >> >> /Contents 9 0 R >>
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 11 0 R >> >> /Contents 10 0 R >>
+endobj
+7 0 obj
+<< /Length 2842 >>
+stream
+BT
+/F1 12 Tf
+1 0 0 1 72 758 Tm
+(QUERST MATCHMAKING SYSTEM - DETAILED OVERVIEW) Tj
+1 0 0 1 72 706 Tm
+(Purpose and Vision) Tj
+1 0 0 1 72 678 Tm
+(The QuERST Matchmaking System \(QuERST-SyMM\) is an end-to-end platform that connects) Tj
+1 0 0 1 72 662 Tm
+(students with qualified tutors and guides them through assessments, scheduling, and) Tj
+1 0 0 1 72 646 Tm
+(academic programs. It aims to streamline the entire tutoring lifecycle-onboarding,) Tj
+1 0 0 1 72 630 Tm
+(pairing, scheduling, exam delivery, and progress tracking-while giving administrators) Tj
+1 0 0 1 72 614 Tm
+(transparency and control over the process.) Tj
+1 0 0 1 72 574 Tm
+(Core Product Pillars) Tj
+1 0 0 1 72 546 Tm
+(- **Role-Based Experience** - Students, tutors, and administrators receive tailored) Tj
+1 0 0 1 72 530 Tm
+(  dashboards and permissions that surface the actions most relevant to them.) Tj
+1 0 0 1 72 514 Tm
+(- **Pairing and Programs** - Administrators can structure tutoring programs, assign) Tj
+1 0 0 1 72 498 Tm
+(  participants, orchestrate pairings, and leverage recommendation tooling.) Tj
+1 0 0 1 72 482 Tm
+(- **Scheduling and Availability** - Both students and tutors maintain detailed weekly) Tj
+1 0 0 1 72 466 Tm
+(  availability, enabling the system to identify overlaps and assign sessions.) Tj
+1 0 0 1 72 450 Tm
+(- **Assessment and Analytics** - Exams, questionnaires, and grading workflows underpin) Tj
+1 0 0 1 72 434 Tm
+(  personalized recommendations and performance tracking.) Tj
+1 0 0 1 72 418 Tm
+(- **Data-Backed Insights** - Analytics artifacts and recommender prototypes inform) Tj
+1 0 0 1 72 402 Tm
+(  continuous improvement to matching quality.) Tj
+1 0 0 1 72 362 Tm
+(Platform Architecture) Tj
+1 0 0 1 72 334 Tm
+(Frontend) Tj
+1 0 0 1 72 318 Tm
+(- Next.js App Router with React 19 and TypeScript for composable UI.) Tj
+1 0 0 1 72 302 Tm
+(- Tailwind CSS plus shadcn/ui for component styling parity.) Tj
+1 0 0 1 72 286 Tm
+(- Client/server component split with React Query for mutation and cache management.) Tj
+1 0 0 1 72 270 Tm
+(- Route grouping for authentication \(`src/app/\(auth\)`\), dashboards, schedules, exams, and) Tj
+1 0 0 1 72 254 Tm
+(  admin consoles.) Tj
+1 0 0 1 72 226 Tm
+(Backend) Tj
+1 0 0 1 72 210 Tm
+(- MongoDB with Mongoose models handling user accounts, schedules, matches, programs,) Tj
+1 0 0 1 72 194 Tm
+(  exams, and derived analytics artifacts.) Tj
+1 0 0 1 72 178 Tm
+(- Server Actions and REST endpoints provide CRUD access, share validation with Zod) Tj
+1 0 0 1 72 162 Tm
+(  schemas, and enforce permission boundaries.) Tj
+1 0 0 1 72 146 Tm
+(- NextAuth Credentials provider authenticates users and injects role metadata into JWT-) Tj
+1 0 0 1 72 130 Tm
+(  backed sessions.) Tj
+1 0 0 1 72 102 Tm
+(Supporting Assets) Tj
+1 0 0 1 72 86 Tm
+(- Docker Compose spins up a local MongoDB instance for development parity.) Tj
+ET
+endstream
+endobj
+8 0 obj
+<< /Length 3142 >>
+stream
+BT
+/F1 12 Tf
+1 0 0 1 72 770 Tm
+(- `recommender_system python/` contains Pydantic models, notebooks, and data) Tj
+1 0 0 1 72 754 Tm
+(  transformations to prototype ML-driven pairing logic.) Tj
+1 0 0 1 72 738 Tm
+(- `data analysis/` houses statistical studies on BFI/VARK data, tutor-student) Tj
+1 0 0 1 72 722 Tm
+(  relationships, and regression findings.) Tj
+1 0 0 1 72 682 Tm
+(Feature Walkthrough) Tj
+1 0 0 1 72 654 Tm
+(Authentication & Onboarding) Tj
+1 0 0 1 72 638 Tm
+(- Users self-register, log in, and receive role-specific routing guarded by middleware and) Tj
+1 0 0 1 72 622 Tm
+(  dashboard checks.) Tj
+1 0 0 1 72 606 Tm
+(- Onboarding status determines whether users must complete profile setup before accessing) Tj
+1 0 0 1 72 590 Tm
+(  core features.) Tj
+1 0 0 1 72 562 Tm
+(Dashboards) Tj
+1 0 0 1 72 546 Tm
+(- `src/app/dashboard/page.tsx` selects a dashboard layout based on the authenticated) Tj
+1 0 0 1 72 530 Tm
+(  user's role.) Tj
+1 0 0 1 72 514 Tm
+(- Students focus on assigned assessments and completion metrics.) Tj
+1 0 0 1 72 498 Tm
+(- Tutors view paired students alongside exam attempts and status summaries.) Tj
+1 0 0 1 72 482 Tm
+(- Admins access high-level stats, quick links to program/exam tooling, and user management) Tj
+1 0 0 1 72 466 Tm
+(  utilities.) Tj
+1 0 0 1 72 438 Tm
+(Program & Participant Management) Tj
+1 0 0 1 72 422 Tm
+(- Admins create tutoring programs with scoped timelines and descriptions) Tj
+1 0 0 1 72 406 Tm
+(  \(`src/app/admin/programs/page.tsx`\).) Tj
+1 0 0 1 72 390 Tm
+(- Participants can be bulk-assigned or removed, with safeguards to cascade pairing data) Tj
+1 0 0 1 72 374 Tm
+(  when needed \(`src/app/admin/programs/assign/page.tsx`\).) Tj
+1 0 0 1 72 358 Tm
+(- Program-specific pairings \(`src/app/admin/programs/pairings/page.tsx`\) replace the) Tj
+1 0 0 1 72 342 Tm
+(  legacy global pairing flow, offering:) Tj
+1 0 0 1 72 326 Tm
+(- Tutor and student selection via searchable comboboxes.) Tj
+1 0 0 1 72 310 Tm
+(- Automated similarity scoring and suggestion refreshing.) Tj
+1 0 0 1 72 294 Tm
+(- Batched confirmation of recommended matches.) Tj
+1 0 0 1 72 278 Tm
+(- Removal workflows with confirmation gates.) Tj
+1 0 0 1 72 250 Tm
+(Scheduling and Paired Availability) Tj
+1 0 0 1 72 234 Tm
+(- Tutors and students configure weekly availability using a drag-select calendar component) Tj
+1 0 0 1 72 218 Tm
+(  \(`src/components/schedule/ScheduleSelector.tsx`\).) Tj
+1 0 0 1 72 202 Tm
+(- Schedules persist to MongoDB via server actions \(`src/lib/actions/scheduleActions.ts`\)) Tj
+1 0 0 1 72 186 Tm
+(  and support removal or reassignment.) Tj
+1 0 0 1 72 170 Tm
+(- When pairings are approved, administrators can assign intersecting timeslots to lock in) Tj
+1 0 0 1 72 154 Tm
+(  tutoring sessions and push them to both schedules.) Tj
+1 0 0 1 72 126 Tm
+(Assessment Lifecycle) Tj
+1 0 0 1 72 110 Tm
+(- **Creation** - Admins and tutors build exams with Markdown-enabled content, multiple) Tj
+1 0 0 1 72 94 Tm
+(  question types, and grading metadata \(`src/app/exams/create/page.tsx`\).) Tj
+1 0 0 1 72 78 Tm
+(- **Assignment & Tracking** - React Query-backed dashboards expose assigned exams grouped) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Length 3242 >>
+stream
+BT
+/F1 12 Tf
+1 0 0 1 72 770 Tm
+(  by assessment type, completed status, and scoring) Tj
+1 0 0 1 72 754 Tm
+(  \(`src/components/exams/AssignedExams.tsx`\).) Tj
+1 0 0 1 72 738 Tm
+(- **Delivery** - During exam attempts, `ExamContext` manages autosave, navigation, timer) Tj
+1 0 0 1 72 722 Tm
+(  tracking, and submission \(`src/app/exam/[id]/page.tsx`\).) Tj
+1 0 0 1 72 706 Tm
+(- **Grading** - Server actions compute scores, tally correctness, and store results for) Tj
+1 0 0 1 72 690 Tm
+(  later review.) Tj
+1 0 0 1 72 674 Tm
+(- **Specialized Questionnaires** - Dedicated admin UIs map Big Five Inventory and VARK) Tj
+1 0 0 1 72 658 Tm
+(  learning-style attributes to exam questions and choices, driving richer learner) Tj
+1 0 0 1 72 642 Tm
+(  profiles.) Tj
+1 0 0 1 72 614 Tm
+(User Directory and Profiles) Tj
+1 0 0 1 72 598 Tm
+(- Admins can search, filter, and inspect user accounts \(`src/app/admin/users/page.tsx`\) to) Tj
+1 0 0 1 72 582 Tm
+(  verify onboarding, role assignments, and activity.) Tj
+1 0 0 1 72 566 Tm
+(- Detailed profile pulls combine schedules, pairings, exam attempts, and special-exam) Tj
+1 0 0 1 72 550 Tm
+(  status while enforcing access restrictions \(`src/lib/actions/getUserProfileAction.ts`\).) Tj
+1 0 0 1 72 510 Tm
+(Data Model Highlights) Tj
+1 0 0 1 72 482 Tm
+(- **Account** - Stores authentication credentials, role type, and onboarding state.) Tj
+1 0 0 1 72 466 Tm
+(- **Match** - Captures the lifecycle of tutor-student pairings, including subject focus) Tj
+1 0 0 1 72 450 Tm
+(  and status transitions.) Tj
+1 0 0 1 72 434 Tm
+(- **Schedule** - Persists weekly availability down to day-level intervals and session) Tj
+1 0 0 1 72 418 Tm
+(  assignments.) Tj
+1 0 0 1 72 402 Tm
+(- **Exam** / **Question** / **Choice** - Compose assessments and metadata for grading.) Tj
+1 0 0 1 72 386 Tm
+(- **ExamStatus** / **ExamAnswers** - Track user attempts, multiple attempts per exam, and) Tj
+1 0 0 1 72 370 Tm
+(  granular responses.) Tj
+1 0 0 1 72 354 Tm
+(- **Program** - Groups students and tutors, centralizing pairings and admin oversight.) Tj
+1 0 0 1 72 338 Tm
+(- **SpecialExam** - Flags exams tied to BFI or VARK for quick lookup by analytics) Tj
+1 0 0 1 72 322 Tm
+(  surfaces.) Tj
+1 0 0 1 72 282 Tm
+(Analytics & Recommendation Initiatives) Tj
+1 0 0 1 72 254 Tm
+(- Python notebooks \(`recommender_system python/`\) explore feature engineering for pairing) Tj
+1 0 0 1 72 238 Tm
+(  models, combining availability, competencies, learning styles, and personality traits.) Tj
+1 0 0 1 72 222 Tm
+(- Data analysis outputs \(`data analysis/`\) document regression experiments and pairings) Tj
+1 0 0 1 72 206 Tm
+(  datasets to validate heuristics or inform ML pipelines.) Tj
+1 0 0 1 72 190 Tm
+(- Future roadmap includes real-time messaging, payment integration, advanced analytics,) Tj
+1 0 0 1 72 174 Tm
+(  LMS integrations, and mobile outreach \(`docs/project_overview.md`\).) Tj
+1 0 0 1 72 134 Tm
+(Operational Considerations) Tj
+1 0 0 1 72 106 Tm
+(- **Environment Variables** - `AUTH_SECRET` and `MONGO_DB_URI` power authentication and) Tj
+1 0 0 1 72 90 Tm
+(  persistence. Docker automation supplies local credentials.) Tj
+1 0 0 1 72 74 Tm
+(- **Testing & Verification** - React Query patterns and server actions are ready for) Tj
+ET
+endstream
+endobj
+10 0 obj
+<< /Length 786 >>
+stream
+BT
+/F1 12 Tf
+1 0 0 1 72 770 Tm
+(  integration tests; exam workflows include autosave to mitigate connectivity issues.) Tj
+1 0 0 1 72 754 Tm
+(- **Security & Permissions** - Role checks guard server actions, NextAuth session) Tj
+1 0 0 1 72 738 Tm
+(  callbacks refresh data, and pairing actions validate tutor/admin access.) Tj
+1 0 0 1 72 698 Tm
+(Summary) Tj
+1 0 0 1 72 670 Tm
+(QuERST-SyMM delivers a modular tutoring ecosystem that spans from onboarding and) Tj
+1 0 0 1 72 654 Tm
+(scheduling through assessments and analytics. Its Next.js + Mongo stack supports rapid) Tj
+1 0 0 1 72 638 Tm
+(iteration, while admin tooling, specialized questionnaires, and data science artifacts lay) Tj
+1 0 0 1 72 622 Tm
+(the groundwork for evidence-based matchmaking and student success insights.) Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000133 00000 n 
+0000000260 00000 n 
+0000000387 00000 n 
+0000000514 00000 n 
+0000000642 00000 n 
+0000003535 00000 n 
+0000006728 00000 n 
+0000010021 00000 n 
+0000010858 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R >>
+startxref
+10929
+%%EOF
