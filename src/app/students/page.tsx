@@ -10,176 +10,173 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { getPairedStudentsAction } from "@/lib/actions/pairingActions";
+import {useEffect, useState} from "react";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
+import {useRouter} from "next/navigation";
+// import { getPairedStudentsAction } from "@/lib/actions/pairingActions";
 import DashboardLayout from "@/components/dashboard-layout";
-import { UserExamStatus } from "@/models/examStatus";
-import { Progress } from "@/components/ui/progress";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import {UserExamStatus} from "@/models/examStatus";
+import {Progress} from "@/components/ui/progress";
+import {Dialog, DialogContent, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
+import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
+import {getTutorPrograms, ProgramData, StudentWithExams} from "@/lib/actions/programActions";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
+import {ChevronDown, ChevronUp, Loader2} from "lucide-react";
 
-interface StudentWithExams {
-  matchId: string;
-  studentId: string;
-  name: string;
-  email: string;
-  pairingDate: string;
-  exams: {
-    id: string;
-    examId: string;
-    name: string;
-    description: string;
-    status: string;
-    score?: number;
-    maxScore?: number;
-    correctAnswers?: number;
-    incorrectAnswers?: number;
-    skippedAnswers?: number;
-    completedAt?: string;
-    attemptNumber: number;
-  }[];
+
+function CollapsibleProgram({ program, students }: { program: ProgramData, students: StudentWithExams[] }) {
+	const [isOpen, setIsOpen] = useState(false);
+	return (
+		<Collapsible open={isOpen} onOpenChange={setIsOpen}>
+			<Card>
+				<CollapsibleTrigger asChild>
+					<CardHeader className="flex flex-row justify-between">
+						<h1><b>{program.title}</b></h1>
+						{isOpen ? (
+							<ChevronUp/>
+						) : (
+							<ChevronDown/>
+						)}
+					</CardHeader>
+				</CollapsibleTrigger>
+				<CollapsibleContent>
+					<CardContent>
+						<h2>{program.description}</h2>
+						<h2>{program.startDate.toDateString()} - {program.endDate.toDateString()}</h2>
+						<h2><b>Students:</b></h2>
+
+						<ul className="list-disc list-inside">
+							{students.map(
+								(student) => {
+									return (
+										<li key={student.id}>
+											{student.name} ({student.email})
+										</li>
+									);
+								}
+							)}
+						</ul>
+					</CardContent>
+				</CollapsibleContent>
+			</Card>
+		</Collapsible>);
 }
 
 export default function StudentsPage() {
-  const [students, setStudents] = useState<StudentWithExams[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const [isExamDetailsOpen, setIsExamDetailsOpen] = useState(false);
-  const [activeStudent, setActiveStudent] = useState<StudentWithExams | undefined>(undefined)
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const pairedStudents = await getPairedStudentsAction();
-        setStudents(pairedStudents);
-      } catch (error) {
-        console.error("Error fetching paired students:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+	const [students, setStudents] = useState<StudentWithExams[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+	const router = useRouter();
+	const [isExamDetailsOpen, setIsExamDetailsOpen] = useState(false);
+	const [activeStudent, setActiveStudent] = useState<StudentWithExams | undefined>(undefined)
 
-    fetchStudents();
-  }, []);
+	const [programs, setPrograms] = useState<ProgramData[]>([]);
+	const {data: programsData, isLoading: isLoadingPrograms, isError: isErrorPrograms} = useQuery({
+		queryKey: ['programs'],
+		queryFn: getTutorPrograms
+	});
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric"
-    });
-  };
+	const queryClient = useQueryClient();
 
-  const handleExamClick = (examId: string) => {
-    router.push(`/exams/grade/${examId}`);
-  };
+	useEffect(() => {
+		if (programsData) {
+			setPrograms(programsData.data || []);
+			setStudents(programsData.students || []);
+		}
+	}, [programsData]);
 
-  const handleOpenExams = (matchId: string) => {
-    //TODO: set what to display here
-    setActiveStudent(students.find(student => student.matchId === matchId));
-    // console.log(activeStudent);
-    setIsExamDetailsOpen(true);
-  }
-  return (
-    <DashboardLayout title="My Students">
-      <div className="space-y-6">
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <p>Loading students...</p>
-          </div>
-        ) : students.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64">
-            <p className="text-lg text-muted-foreground mb-4">You don't have any paired students yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {students.map((student) => (
-              <Card key={student.matchId} className="overflow-hidden w-full">
-                <CardHeader>
-                  <CardTitle>{student.name}</CardTitle>
-                  <CardDescription>
-                    {student.email}
-                    <br />
-                    Paired since: {formatDate(student.pairingDate)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Total Exams: {student.exams.length}</span>
-                      {/* <span>
-                        Completed: {student.exams.filter(exam => exam.status === UserExamStatus.FINISHED).length}
-                      </span> */}
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button onClick={() => handleOpenExams(student.matchId)} disabled={isLoading}>
-                    View Exam Performance
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+	const formatDate = (dateString: string) => {
+		return new Date(dateString).toLocaleDateString("en-US", {
+			year: "numeric",
+			month: "long",
+			day: "numeric"
+		});
+	};
 
-      <Dialog open={isExamDetailsOpen} onOpenChange={setIsExamDetailsOpen}>
-        <DialogContent className="!max-w-[100%] md:!max-w-[70%] lg:!max-w-[50%]">
-          <DialogHeader>
-            <DialogTitle>{activeStudent?.name}'s Exams</DialogTitle>
-          </DialogHeader>
+	const handleExamClick = (examId: string) => {
+		router.push(`/exams/grade/${examId}`);
+	};
 
-          {activeStudent && activeStudent.exams.length > 0 ? (
-            activeStudent.exams.map(exam => (
-              <Card key={exam.id} onClick={() => handleExamClick(exam.id)}>
-                <CardHeader>
-                  <CardTitle>                   <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-medium">{exam.name}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        {exam.status === UserExamStatus.FINISHED
-                          ? `Completed on ${exam.completedAt ? formatDate(exam.completedAt) : 'Unknown date'}`
-                          : exam.status === UserExamStatus.STARTED
-                            ? 'In progress'
-                            : 'Not started'}
-                      </p>
-                    </div>
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+	const handleOpenExams = (matchId: string) => {
+		//TODO: set what to display here
+		setActiveStudent(students.find(student => student.matchId === matchId));
+		// console.log(activeStudent);
+		setIsExamDetailsOpen(true);
+	}
+	return (
+		<DashboardLayout title="My Students">
+			{isLoadingPrograms ? (
+				<div className="flex flex-col items-center justify-center mt-10">
+					<Loader2 className="h-8 w-8 animate-spin text-primary"/>
+					<p className="mt-4 text-lg font-medium text-primary">Loading programs...</p>
+				</div>
+			) : isErrorPrograms ? (
+				<div className="flex flex-col items-center justify-center mt-10">
+					<p className="mt-4 text-lg font-medium text-red-600">Failed to load programs. Please try again later.</p>
+				</div>
+			) : programs.length === 0 ? (
+				<div className="flex flex-col items-center justify-center mt-10">
+					<p className="mt-4 text-lg font-medium text-muted-foreground">You are not assigned to any programs. If this is
+						a mistake, contact support.</p>
+				</div>
+			) : (
+				<>
+					{programs.map((program) => {
+						const programStudents = students.filter((s) => program.participants.includes(s.id));
+						return (<CollapsibleProgram key={program.id} program={program} students={programStudents}/>);
+					})}
+				</>
+			)
+
+			}
+
+			<Dialog open={isExamDetailsOpen} onOpenChange={setIsExamDetailsOpen}>
+				<DialogContent className="!max-w-[100%] md:!max-w-[70%] lg:!max-w-[50%]">
+					<DialogHeader>
+						<DialogTitle>{activeStudent?.name}'s Exams</DialogTitle>
+					</DialogHeader>
+
+					{activeStudent && activeStudent.exams.length > 0 ? (
+						activeStudent.exams.map(exam => (
+							<Card key={exam.id} onClick={() => handleExamClick(exam.id)}>
+								<CardHeader>
+									<CardTitle>
+										<div className="flex justify-between items-start mb-2">
+											<div>
+												<h4 className="font-medium">{exam.name}</h4>
+												<p className="text-xs text-muted-foreground">
+													{exam.status === UserExamStatus.FINISHED
+														? `Completed on ${exam.completedAt ? formatDate(exam.completedAt) : 'Unknown date'}`
+														: exam.status === UserExamStatus.STARTED
+															? 'In progress'
+															: 'Not started'}
+												</p>
+											</div>
+											<span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
                       Attempt {exam.attemptNumber}
                     </span>
-                  </div></CardTitle>
-                  <CardDescription>
-                    {exam.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent> 
-                  {exam.status === UserExamStatus.FINISHED && (
-                    <div className="space-y-2">
-                      {exam.score !== undefined && exam.maxScore && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span>Score</span>
-                            <span>{exam.score} / {exam.maxScore}</span>
-                          </div>
-                          <Progress
-                            value={(exam.score / exam.maxScore) * 100}
-                            className="h-2"
-                          />
-                        </div>
-                      )}
+										</div>
+									</CardTitle>
+									<CardDescription>
+										{exam.description}
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									{exam.status === UserExamStatus.FINISHED && (
+										<div className="space-y-2">
+											{exam.score !== undefined && exam.maxScore && (
+												<div className="space-y-1">
+													<div className="flex justify-between text-xs">
+														<span>Score</span>
+														<span>{exam.score} / {exam.maxScore}</span>
+													</div>
+													<Progress
+														value={(exam.score / exam.maxScore) * 100}
+														className="h-2"
+													/>
+												</div>
+											)}
 
-                      {/* {exam.correctAnswers !== undefined && (
+											{/* {exam.correctAnswers !== undefined && (
                         <div className="grid grid-cols-3 gap-2 text-xs mt-2">
                           <div className="flex flex-col items-center p-1 bg-green-100 rounded">
                             <span className="font-medium text-green-800">{exam.correctAnswers}</span>
@@ -195,18 +192,18 @@ export default function StudentsPage() {
                           </div>
                         </div>
                       )} */}
-                    </div>
-                  )}
-                </CardContent>
+										</div>
+									)}
+								</CardContent>
 
-              </Card>
-            ))
-          ): (
-            <p className="text-sm text-muted-foreground py-2">No exams assigned yet.</p>
-          )}
-        </DialogContent>
+							</Card>
+						))
+					) : (
+						<p className="text-sm text-muted-foreground py-2">No exams assigned yet.</p>
+					)}
+				</DialogContent>
 
-      </Dialog>
-    </DashboardLayout>
-  );
+			</Dialog>
+		</DashboardLayout>
+	);
 }

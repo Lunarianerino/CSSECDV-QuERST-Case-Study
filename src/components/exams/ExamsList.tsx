@@ -109,53 +109,6 @@ const ExamsList = () => {
       </Dialog>
     </div>
   );
-  // return (
-  //   <Table className="overflow-hidden">
-  //     <TableHeader>
-  //       <TableRow>
-  //         <TableHead>Name</TableHead>
-  //         <TableHead>Description</TableHead>
-  //         <TableHead>Actions</TableHead>
-  //       </TableRow>
-  //     </TableHeader>
-  //     <TableBody>
-  //       {examList.map((exam, index) => (
-  //         <TableRow key={index}>
-  //           <TableCell>{exam.name}</TableCell>
-  //           <TableCell>{exam.description}</TableCell>
-  //           <TableCell>
-
-  //             <Button>
-  //               Edit
-  //             </Button>
-  //             <Dialog>
-  //               <DialogTrigger asChild>
-  //                 <Button>
-  //                   Assign
-  //                 </Button>
-  //               </DialogTrigger>
-  //               <DialogContent>
-  //                 <DialogHeader>
-  //                   <DialogTitle>Assign Exam</DialogTitle>
-  //                 </DialogHeader>
-  //                 <DialogDescription>
-  //                   Assign this exam to a user
-  //                 </DialogDescription>
-  //                 <UsersModal examId={exam.id} onClose={() => {
-  //                   const dialogClose = document.querySelector('[data-radix-dialog-content] button[aria-label="Close"]') as HTMLButtonElement;
-  //                   dialogClose?.click();
-  //                 }} />
-  //                 <DialogFooter className="sm:justify-start">
-  //                   <DialogClose id="closeDialog"/>
-  //                 </DialogFooter>
-  //               </DialogContent>
-  //             </Dialog>
-  //           </TableCell>
-  //         </TableRow>
-  //       ))}
-  //     </TableBody>
-  //   </Table>
-  // )
 }
 
 export default ExamsList;

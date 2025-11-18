@@ -13,9 +13,10 @@ import { useSession } from "next-auth/react";
 import { AccountType } from "@/models/account";
 import { getUserPairings } from "@/lib/actions/pairingActions";
 import { Skeleton } from "@/components/ui/skeleton";
+import {getTutorStudents, PairedStudentsResponse, ProgramsResponse} from "@/lib/actions/programActions";
 
 type User = {
-  _id: string;
+  id: string;
   name: string;
   email: string;
 };
@@ -55,28 +56,12 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
           const result = await getTutorsAndStudentsAggregation();
           setUsers([...result.tutors, ...result.students]);
         } else if (isTutor) {
-          const result = await getUserPairings();
-          const uniqueStudentsMap = new Map<string, { _id: string; name: string; email: string }>();
-          for (const pairing of result) {
-            const studentId = pairing.student.id;
-            if (!uniqueStudentsMap.has(studentId)) {
-              uniqueStudentsMap.set(studentId, {
-                _id: studentId,
-                name: pairing.student.name,
-                email: pairing.student.email,
-              });
-            }
-          }
-          // const formattedResults = result.map((pairing) => {
-          //   return {
-          //     _id: pairing.student.id,
-          //     name: pairing.student.name,
-          //     email: pairing.student.email,
-          //   };
-          // });
-          const formattedResults = Array.from(uniqueStudentsMap.values());
-          // console.log(formattedResults);
-          setUsers(formattedResults);
+          const result : PairedStudentsResponse = await getTutorStudents();
+					if (!result.status) {
+						setError(result.error || "Unknown error");
+					}
+
+					setUsers(result.data == undefined ? [] : result.data);
         } else {
           throw new Error("Unauthorized");
         }
@@ -131,7 +116,7 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
   //   return [];
   // })();
   const userOptions = users.map((user) => ({
-    value: user._id,
+    value: user.id,
     label: `${user.name}`,
     email: user.email,
   }));
@@ -187,10 +172,6 @@ const UsersModal = ({ examId, onClose }: UsersModalProps) => {
           toast.error(result.message || "Failed to assign exam to user", {id: "assigning-user"});
         }
       }
-      //  else if (!assignToAllStudents && !assignToAllTutors) {
-      //   // If no user is selected and no group assignment is enabled
-      //   toast.error("No user selected");
-      // }
     } catch (error) {
       console.error("Error assigning exam:", error);
       toast.error("Failed to assign exam");

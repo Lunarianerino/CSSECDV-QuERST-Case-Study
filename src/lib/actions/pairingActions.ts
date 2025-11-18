@@ -1,3 +1,5 @@
+
+//! IDEALLY, never use these again. These actions, and pairings in general, is deprecated.
 "use server";
 import { connectToMongoDB } from "../db";
 import { MatchStatus } from "@/models/match";
