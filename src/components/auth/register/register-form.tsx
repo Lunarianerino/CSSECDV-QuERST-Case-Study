@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { register } from "@/lib/server/actions/register";
+import { register } from "@/lib/actions/register";
 import { signIn } from "next-auth/react";
 import {
   Form,

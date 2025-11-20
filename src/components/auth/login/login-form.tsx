@@ -42,11 +42,11 @@ export default function LoginForm() {
       });
 
       if (!res) {
-        throw new Error("No response from server");
+        throw new Error("Something went wrong");
       }
 
       if (!res.ok) {
-        throw new Error("Invalid credentials");
+        throw new Error(res.error || "Something went wrong");
       }
 
       return res;

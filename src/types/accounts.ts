@@ -4,4 +4,5 @@ export interface BasicAccountInfo {
   email: string;
   type: string;
   onboarded: boolean;
+	disabled: boolean;
 }

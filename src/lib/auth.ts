@@ -16,14 +16,16 @@ export const authOptions: NextAuthOptions = {
         connectToMongoDB();
         const user = await Account.findOne({
           email: credentials?.email,
-        }).select("+password +type +onboarded +_id");
-        if (!user) throw new Error("Wrong Email or Account does not exist");
+        }).select("+password +type +onboarded +_id +disabled");
+        if (!user) throw new Error("Invalid Credentials");
+	      if (user.disabled) throw new Error("Account disabled");
+
         const passwordMatch = await compare(
           credentials!.password.toString(),
           user.password
         );
         // console.log(user);
-        if (!passwordMatch) throw new Error("Wrong Password");
+        if (!passwordMatch) throw new Error("Invalid Credentials");
         return {
           id: user._id.toString(),
           email: user.email,

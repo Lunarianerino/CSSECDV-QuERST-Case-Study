@@ -11,6 +11,7 @@ export interface IAccount extends Document {
   email: string;
   password: string;
   type: string;
+	disabled: boolean;
 }
 
 export const AccountSchema: Schema = new Schema(
@@ -20,6 +21,7 @@ export const AccountSchema: Schema = new Schema(
     password: { type: String, required: true },
     type: { type: String, required: true, enum: AccountType, default: AccountType.UNKNOWN },
     onboarded: { type: Boolean, required: true, default: false },
+	  disabled: { type: Boolean, required: true, default: false },
   },
   {
     timestamps: true,

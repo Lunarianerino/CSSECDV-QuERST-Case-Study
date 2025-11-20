@@ -18,53 +18,15 @@ import DashboardLayout from "@/components/dashboard-layout";
 import {UserExamStatus} from "@/models/examStatus";
 import {Progress} from "@/components/ui/progress";
 import {Dialog, DialogContent, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
-import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {getTutorPrograms, ProgramData, StudentWithExams} from "@/lib/actions/programActions";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
-import {ChevronDown, ChevronUp, Loader2} from "lucide-react";
+import {Loader2} from "lucide-react";
+import {CollapsibleProgram} from "@/components/students/collapsibleProgram";
 
-
-function CollapsibleProgram({ program, students }: { program: ProgramData, students: StudentWithExams[] }) {
-	const [isOpen, setIsOpen] = useState(false);
-	return (
-		<Collapsible open={isOpen} onOpenChange={setIsOpen}>
-			<Card>
-				<CollapsibleTrigger asChild>
-					<CardHeader className="flex flex-row justify-between">
-						<h1><b>{program.title}</b></h1>
-						{isOpen ? (
-							<ChevronUp/>
-						) : (
-							<ChevronDown/>
-						)}
-					</CardHeader>
-				</CollapsibleTrigger>
-				<CollapsibleContent>
-					<CardContent>
-						<h2>{program.description}</h2>
-						<h2>{program.startDate.toDateString()} - {program.endDate.toDateString()}</h2>
-						<h2><b>Students:</b></h2>
-
-						<ul className="list-disc list-inside">
-							{students.map(
-								(student) => {
-									return (
-										<li key={student.id}>
-											{student.name} ({student.email})
-										</li>
-									);
-								}
-							)}
-						</ul>
-					</CardContent>
-				</CollapsibleContent>
-			</Card>
-		</Collapsible>);
-}
 
 export default function StudentsPage() {
 	const [students, setStudents] = useState<StudentWithExams[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
+	// const [isLoading, setIsLoading] = useState(true);
 	const router = useRouter();
 	const [isExamDetailsOpen, setIsExamDetailsOpen] = useState(false);
 	const [activeStudent, setActiveStudent] = useState<StudentWithExams | undefined>(undefined)
@@ -96,12 +58,12 @@ export default function StudentsPage() {
 		router.push(`/exams/grade/${examId}`);
 	};
 
-	const handleOpenExams = (matchId: string) => {
-		//TODO: set what to display here
-		setActiveStudent(students.find(student => student.matchId === matchId));
-		// console.log(activeStudent);
-		setIsExamDetailsOpen(true);
-	}
+	// const handleOpenExams = (matchId: string) => {
+	// 	//TODO: set what to display here
+	// 	setActiveStudent(students.find(student => student.matchId === matchId));
+	// 	// console.log(activeStudent);
+	// 	setIsExamDetailsOpen(true);
+	// }
 	return (
 		<DashboardLayout title="My Students">
 			{isLoadingPrograms ? (

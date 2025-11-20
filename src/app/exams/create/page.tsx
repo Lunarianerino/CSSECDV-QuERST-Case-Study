@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { examSchema, examQuestionSchema, questionChoiceSchema, ExamFormValues, ExamQuestionFormValues, QuestionChoiceFormValues } from "@/lib/validations/exams";
-import { createExam } from "@/lib/server/actions/exam";
+import { createExam } from "@/lib/actions/exam";
 import { ExamTypes } from "@/models/exam";
 import { getExamTypes } from "@/lib/actions/examActions";
 import { Switch } from "@/components/ui/switch";
