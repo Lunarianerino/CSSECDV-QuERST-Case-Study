@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { BasicAccountInfo } from "@/types/accounts";
 import {CreateUserFormValues} from "@/lib/validations/auth";
+import {compareSync} from "bcrypt-ts";
 
 
 /**
@@ -208,7 +209,7 @@ export async function disableUser (disabled: boolean, userId: string) : Promise<
 				onboarded: updatedUser.onboarded,
 				disabled: updatedUser.disabled,
 			}
-			console.log("updatedUser:", updatedUser);
+			//console.log("updatedUser:", updatedUser);
 			return {
 				success: true,
 				status: 200,
@@ -228,4 +229,68 @@ export async function disableUser (disabled: boolean, userId: string) : Promise<
 			error: "Internal Server Error",
 		}
 	}
+}
+
+export async function changePassword (oldPassword: string, newPassword: string, confirmPassword: string) : Promise<UserActionResponse> {
+	try {
+		const session = await getServerSession(authOptions);
+		if (!session) {
+			return {
+				success: false,
+				error: "Unauthorized action",
+				status: 401
+			}
+		}
+		if (newPassword !== confirmPassword) {
+			return {
+				success: false,
+				error: "New password and confirm password do not match",
+				status: 400
+			}
+		}
+
+		if (oldPassword == newPassword) {
+			return {
+				success: false,
+				error: "New password cannot be the same as the old one",
+				status: 400
+			}
+		}
+
+		await connectToMongoDB();
+		const user = await Account.findById(session.user.id);
+		if (!user) {
+			return {
+				success: false,
+				error: "User does not exist",
+				status: 404
+			}
+		}
+		// Verify old password against stored hash (re-authenticate)
+		const oldPasswordMatches = compareSync(oldPassword, user.password);
+
+		if (!oldPasswordMatches) {
+			return {
+				success: false,
+				error: "Old password is incorrect",
+				status: 400,
+			};
+		}
+
+		user.password = newPassword;
+
+		await user.save();
+
+		return {
+			success: true,
+			status: 200,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			status: 500,
+			error: "Internal Server Error",
+		}
+	}
+
 }

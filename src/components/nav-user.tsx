@@ -1,12 +1,12 @@
 "use client"
 
 import {
-  BadgeCheck,
-  Bell,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
+	BadgeCheck,
+	Bell,
+	ChevronsUpDown,
+	CreditCard,
+	LogOut,
+	Sparkles, UserRound,
 } from "lucide-react"
 
 import {
@@ -45,6 +45,9 @@ export function NavUser({
     await signOut({ redirect: false });
     window.location.href = "/";
   };
+	const handleProfile = async () => {
+		window.location.href = "/profile";
+	}
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -109,6 +112,10 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator /> */}
+	          <DropdownMenuItem onClick={handleProfile}>
+		          <UserRound />
+		          Profile
+	          </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut />
               Log out
