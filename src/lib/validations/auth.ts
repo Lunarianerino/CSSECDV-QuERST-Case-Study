@@ -4,10 +4,16 @@ export const registerSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z
       .string()
+      .trim() // remove leading/trailing whitespace
       .min(8, { message: "Password must be at least 8 characters" })
       .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
       .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
       .regex(/[0-9]/, { message: "Password must contain at least one number" })
+      .regex(/^\S+$/, { message: "Password must not contain spaces" })
+      .regex(/^(?!.*(123|234|345|456|567|678|789|012|ABC|BCD|CDE|DEF|abc|bcd|cde|def))/, {
+        message: "Password must not contain common patterns"}) // added
+      .regex(/^(?!.*(.)\1\1)/, { 
+        message: "Password must not contain three or more repeating characters" }) // added 
       .regex(/[^A-Za-z0-9]/, { message: "Password must contain at least one special character" }),
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
