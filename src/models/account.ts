@@ -31,9 +31,10 @@ export const AccountSchema: Schema = new Schema(
 AccountSchema.pre("save", function (next) {
   const account = this as unknown as IAccount;
   //TODO: Add session checking to see if they are modifying their own account
-  if (!account.isModified("password")) return next(); 
+  if (!account.isModified("password")) return next();
   const hash = hashSync(account.password, 10);
   account.password = hash;
+	console.log("Password hashed: ", account.password);
   return next();
 });
 

@@ -137,7 +137,7 @@ export default function AssignedExams({ showStats = true }: AssignedExamsProps) 
             {sortedExamTypes.map((type) => (
               <div key={type} className="space-y-4">
                 <h3 className="text-xl font-semibold">{getExamTypeName(type)}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {groupedExams[type].map((exam) => (
                     <ExamCard
                       key={exam.id}

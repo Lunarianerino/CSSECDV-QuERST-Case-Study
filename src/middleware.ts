@@ -6,7 +6,7 @@ import { AccountType } from "@/models/account";
 // Set runtime to nodejs to avoid Edge Runtime compatibility issues with Mongoose
 export const runtime = 'nodejs';
 // Explicitly define routes that require auth and onboarding
-const protectedRoutes = ['/dashboard', '/exam', '/schedule', '/onboarding'];
+const protectedRoutes = ['/dashboard', '/exam', '/schedule', '/onboarding', '/profile'];
 const authPages = ['/login', '/register'];
 const adminRoutes = ['/admin']
 const tutorOrAdminRoutes = ['/exams', '/students']
