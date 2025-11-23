@@ -14,6 +14,8 @@ export interface IAccount extends Document {
   disabled: boolean;
   passwordHistory: [{ hash: string; changedAt: Date }];
   passwordChangedAt: Date;
+  lastLoginAttemptAt: Date;
+  lastLoginAttemptSuccess: boolean;
 }
 
 export const AccountSchema: Schema = new Schema(
@@ -33,7 +35,9 @@ export const AccountSchema: Schema = new Schema(
       ],
       default: [],
     },
-    passwordChangedAt: { type: Date, required: true, default: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    passwordChangedAt: { type: Date, required: true, default: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    lastLoginAttemptAt: {type: Date, required: true, default: Date.now},
+    lastLoginAttemptSuccess: {type: Boolean, required: true, default: true}
   },
   {
     timestamps: true,

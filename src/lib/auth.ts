@@ -16,22 +16,36 @@ export const authOptions: NextAuthOptions = {
         connectToMongoDB();
         const user = await Account.findOne({
           email: credentials?.email,
-        }).select("+password +type +onboarded +_id +disabled");
+        })
         if (!user) throw new Error("Invalid Credentials");
-	      if (user.disabled) throw new Error("Account disabled");
-
+        if (user.disabled) throw new Error("Account disabled");
+        const prevAttempt = {
+          at: user.lastLoginAttemptAt,
+          success: user.lastLoginAttemptSuccess,
+        }
         const passwordMatch = await compare(
           credentials!.password.toString(),
           user.password
         );
         // console.log(user);
-        if (!passwordMatch) throw new Error("Invalid Credentials");
+        if (!passwordMatch) {
+          await Account.updateOne({ _id: user._id }, {
+            lastLoginAttemptAt: new Date(),
+            lastLoginAttemptSuccess: false,
+          })
+          throw new Error("Invalid Credentials");
+        }
+        await Account.updateOne({ _id: user._id }, {
+          lastLoginAttemptAt: new Date(),
+          lastLoginAttemptSuccess: true,
+        });
         return {
           id: user._id.toString(),
           email: user.email,
           type: user.type,
-          name: user.name, 
-          onboarded: user.onboarded, 
+          name: user.name,
+          onboarded: user.onboarded,
+          prevLoginAttempt: prevAttempt
         };
       },
     }),
@@ -46,14 +60,17 @@ export const authOptions: NextAuthOptions = {
         token.type = user.type;
         token.name = user.name;
         token.onboarded = user.onboarded;
+        if (user && (user as any).prevLoginAttempt) {
+          token.prevLoginAttempt = (user as any).prevLoginAttempt;
+        }
       }
-      
+
       // Check for updated user data on each token refresh
       if (token.email) {
         try {
           await connectToMongoDB();
           const latestUser = await Account.findOne({ email: token.email });
-          
+
           if (latestUser) {
             // Update token with latest user data
             token.id = latestUser._id.toString();
@@ -65,7 +82,7 @@ export const authOptions: NextAuthOptions = {
           console.error("Error refreshing user data in JWT callback:", error);
         }
       }
-      
+
       return token;
     },
     async session({ session, token }) {
@@ -74,6 +91,7 @@ export const authOptions: NextAuthOptions = {
         session.user.type = token.type as string;
         session.user.name = token.name as string;
         session.user.onboarded = token.onboarded as boolean;
+        session.user.prevLoginAttempt = token.prevLoginAttempt as JSON;
         // For debugging
         // console.log("Token in session callback:", token);
         // console.log("Session after modification:", session);
