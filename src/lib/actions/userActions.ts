@@ -5,8 +5,8 @@ import { AccountType } from "@/models/account";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { BasicAccountInfo } from "@/types/accounts";
-import {CreateUserFormValues} from "@/lib/validations/auth";
-import {compareSync} from "bcrypt-ts";
+import { CreateUserFormValues } from "@/lib/validations/auth";
+import { compareSync } from "bcrypt-ts";
 
 
 /**
@@ -14,111 +14,111 @@ import {compareSync} from "bcrypt-ts";
  * This is more efficient for large datasets as it only requires one database query
  */
 export async function getTutorsAndStudentsAggregation() {
-  try {
-    // Check if user is authorized (admin only)
-    const session = await getServerSession(authOptions);
-    if (!session || session.user?.type !== AccountType.ADMIN) {
-      throw new Error("Not authorized to access user data");
-    }
+	try {
+		// Check if user is authorized (admin only)
+		const session = await getServerSession(authOptions);
+		if (!session || session.user?.type !== AccountType.ADMIN) {
+			throw new Error("Not authorized to access user data");
+		}
 
-    // Connect to MongoDB
-    await connectToMongoDB();
+		// Connect to MongoDB
+		await connectToMongoDB();
 
-    // Use aggregation to group users by type
-    const result = await Account.aggregate([
-      {
-        $match: {
-          type: { $in: [AccountType.TUTOR, AccountType.STUDENT] }
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          email: 1,
-          type: 1,
-          onboarded: 1,
-          createdAt: 1,
-          updatedAt: 1,
-	        disabled: 1
-          // Exclude password field
-        }
-      },
-      {
-        $group: {
-          _id: "$type",
-          users: { $push: "$$ROOT" }
-        }
-      }
-    ]);
+		// Use aggregation to group users by type
+		const result = await Account.aggregate([
+			{
+				$match: {
+					type: { $in: [AccountType.TUTOR, AccountType.STUDENT] }
+				}
+			},
+			{
+				$project: {
+					_id: 1,
+					name: 1,
+					email: 1,
+					type: 1,
+					onboarded: 1,
+					createdAt: 1,
+					updatedAt: 1,
+					disabled: 1
+					// Exclude password field
+				}
+			},
+			{
+				$group: {
+					_id: "$type",
+					users: { $push: "$$ROOT" }
+				}
+			}
+		]);
 
-    // Transform the result into the expected format
-    const tutorsAndStudents = {
-      tutors: [],
-      students: []
-    };
+		// Transform the result into the expected format
+		const tutorsAndStudents = {
+			tutors: [],
+			students: []
+		};
 
-    result.forEach(group => {
-      // Map MongoDB documents to User type with proper type conversion
-      const mappedUsers = group.users.map((user: any) => ({
-        _id: user._id.toString(), // Convert ObjectId to string
-        name: user.name,
-        email: user.email,
-	      disabled: user.disabled,
-      }));
-      
-      if (group._id === AccountType.TUTOR) {
-        tutorsAndStudents.tutors = mappedUsers;
-      } else if (group._id === AccountType.STUDENT) {
-        tutorsAndStudents.students = mappedUsers;
-      }
-    });
+		result.forEach(group => {
+			// Map MongoDB documents to User type with proper type conversion
+			const mappedUsers = group.users.map((user: any) => ({
+				_id: user._id.toString(), // Convert ObjectId to string
+				name: user.name,
+				email: user.email,
+				disabled: user.disabled,
+			}));
 
-    return tutorsAndStudents;
-  } catch (error) {
-    console.error("Error fetching tutors and students:", error);
-    throw new Error("Failed to fetch users");
-  }
+			if (group._id === AccountType.TUTOR) {
+				tutorsAndStudents.tutors = mappedUsers;
+			} else if (group._id === AccountType.STUDENT) {
+				tutorsAndStudents.students = mappedUsers;
+			}
+		});
+
+		return tutorsAndStudents;
+	} catch (error) {
+		console.error("Error fetching tutors and students:", error);
+		throw new Error("Failed to fetch users");
+	}
 }
 
 export async function getUserTypeById(userId: string): Promise<AccountType | null> {
-  try {
-    await connectToMongoDB();
-    const user = await Account.findById(userId);
-    return user ? user.type : null;
-  } catch (error) {
-    console.error("Error fetching user type:", error);
-    throw new Error("Failed to fetch user type"); 
-  }
+	try {
+		await connectToMongoDB();
+		const user = await Account.findById(userId);
+		return user ? user.type : null;
+	} catch (error) {
+		console.error("Error fetching user type:", error);
+		throw new Error("Failed to fetch user type");
+	}
 }
 
-export async function getAllUsers() : Promise<BasicAccountInfo[]>{
-  try {
-    // Check if user is authorized (admin only)
-    const session = await getServerSession(authOptions);
-    if (!session || session.user?.type!== AccountType.ADMIN) {
-      throw new Error("Not authorized to access user data");
-    }
+export async function getAllUsers(): Promise<BasicAccountInfo[]> {
+	try {
+		// Check if user is authorized (admin only)
+		const session = await getServerSession(authOptions);
+		if (!session || session.user?.type !== AccountType.ADMIN) {
+			throw new Error("Not authorized to access user data");
+		}
 
-    await connectToMongoDB();
-    const users = await Account.find({});
-    const formattedUsers : BasicAccountInfo[] = users.map((user) => {
-      return {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        type: user.type,
-        onboarded: user.onboarded,
-	      disabled: user.disabled,
-      }
-    })
-    // console.log("Formatted Users:", formattedUsers);
-    return formattedUsers;
+		await connectToMongoDB();
+		const users = await Account.find({});
+		const formattedUsers: BasicAccountInfo[] = users.map((user) => {
+			return {
+				id: user._id.toString(),
+				name: user.name,
+				email: user.email,
+				type: user.type,
+				onboarded: user.onboarded,
+				disabled: user.disabled,
+			}
+		})
+		// console.log("Formatted Users:", formattedUsers);
+		return formattedUsers;
 
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    throw new Error("Failed to fetch users");
-  }
+	} catch (error) {
+		console.error("Error fetching users:", error);
+		throw new Error("Failed to fetch users");
+	}
 }
 
 export interface UserActionResponse {
@@ -128,10 +128,10 @@ export interface UserActionResponse {
 	data?: BasicAccountInfo;
 }
 
-export async function createUser(form: CreateUserFormValues) : Promise<UserActionResponse> {
+export async function createUser(form: CreateUserFormValues): Promise<UserActionResponse> {
 	try {
 		const session = await getServerSession(authOptions);
-		if (!session || session.user?.type!== AccountType.ADMIN) {
+		if (!session || session.user?.type !== AccountType.ADMIN) {
 			return {
 				success: false,
 				error: "Unauthorized action",
@@ -144,14 +144,14 @@ export async function createUser(form: CreateUserFormValues) : Promise<UserActio
 		// Create account
 		const userFound = await Account.findOne({ email: form.email });
 
-		if(userFound){
+		if (userFound) {
 			return {
 				success: false,
 				error: "User already exists",
 				status: 422
 			}
 		}
-		const user = new Account ({
+		const user = new Account({
 			name: form.name,
 			email: form.email,
 			password: form.password,
@@ -174,10 +174,10 @@ export async function createUser(form: CreateUserFormValues) : Promise<UserActio
 	}
 }
 
-export async function disableUser (disabled: boolean, userId: string) : Promise<UserActionResponse> {
+export async function disableUser(disabled: boolean, userId: string): Promise<UserActionResponse> {
 	try {
 		const session = await getServerSession(authOptions);
-		if (!session || session.user?.type!== AccountType.ADMIN) {
+		if (!session || session.user?.type !== AccountType.ADMIN) {
 			return {
 				success: false,
 				error: "Unauthorized action",
@@ -197,7 +197,7 @@ export async function disableUser (disabled: boolean, userId: string) : Promise<
 			}
 		}
 
-		const updatedUser = await Account.findByIdAndUpdate(userId, {disabled: disabled}, {new: true});
+		const updatedUser = await Account.findByIdAndUpdate(userId, { disabled: disabled }, { new: true });
 
 
 		if (updatedUser) {
@@ -231,7 +231,7 @@ export async function disableUser (disabled: boolean, userId: string) : Promise<
 	}
 }
 
-export async function changePassword (oldPassword: string, newPassword: string, confirmPassword: string) : Promise<UserActionResponse> {
+export async function changePassword(oldPassword: string, newPassword: string, confirmPassword: string): Promise<UserActionResponse> {
 	try {
 		const session = await getServerSession(authOptions);
 		if (!session) {
@@ -277,8 +277,41 @@ export async function changePassword (oldPassword: string, newPassword: string, 
 			};
 		}
 
-		user.password = newPassword;
+		const MIN_AGE_MS = 24 * 60 * 60 * 1000;
+		const now = Date.now();
+		const lastChanged = user.passwordChangedAt ? user.passwordChangedAt.getTime() : 0;
+		console.log(lastChanged);
+		if (now - lastChanged < MIN_AGE_MS) {
+			return {
+				success: false,
+				error: "Password was changed less than 24 hours ago",
+				status: 400,
+			};
+		}
+		
+		// after verifying oldPassword matches and before setting the new one
+		const history = user.passwordHistory || [];
 
+		const reused =
+			compareSync(newPassword, user.password) ||
+			history.some((entry) => compareSync(newPassword, entry.hash));
+
+		if (reused) {
+			return {
+				success: false,
+				error: "You cannot reuse a recent password",
+				status: 400,
+			};
+		}
+
+		// keep old hash, trim to depth 5
+		const updatedHistory = [
+			{ hash: user.password, changedAt: new Date() },
+			...history,
+		].slice(0, 5);
+
+		user.passwordHistory = updatedHistory;
+		user.password = newPassword; // pre-save hook will hash this
 		await user.save();
 
 		return {
@@ -286,6 +319,7 @@ export async function changePassword (oldPassword: string, newPassword: string, 
 			status: 200,
 		};
 	} catch (error) {
+		console.log(error);
 		return {
 			success: false,
 			status: 500,
