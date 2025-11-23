@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { AccountType } from "@/models/account";
+import { logSecurityEvent } from "@/lib/securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 // Set runtime to nodejs to avoid Edge Runtime compatibility issues with Mongoose
 export const runtime = 'nodejs';
@@ -45,28 +47,110 @@ export async function middleware(request: NextRequest) {
   if (isAuth && isIndexRoute) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
-  // 🚫 Redirect non-admin admin users trying to access admin routes
+  // 🚫 Redirect non-admin users trying to access admin routes
   if (!isAdmin && isAdminRoute) {
+    fetch(new URL("/api/security-log", request.url), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(process.env.SECURITY_LOG_TOKEN ? { "x-log-token": process.env.SECURITY_LOG_TOKEN } : {}),
+      },
+      body: JSON.stringify({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: token?.id as string,
+        resource: pathname,
+        message: "Blocked by middleware (non-admin accessing admin route)",
+        req: request,
+      }),
+      keepalive: true,
+    }).catch(() => { });
+
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   // 🔒 Redirect unauthenticated users trying to access protected pages
   if (isProtectedRoute && !isAuth) {
+    fetch(new URL("/api/security-log", request.url), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(process.env.SECURITY_LOG_TOKEN ? { "x-log-token": process.env.SECURITY_LOG_TOKEN } : {}),
+      },
+      body: JSON.stringify({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: pathname,
+        message: "Blocked by middleware (unauthenticated user accessing protected pages)",
+        req: request,
+      }),
+      keepalive: true,
+    }).catch(() => { });
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
   // 👤 Redirect authenticated users who aren't onboarded
   if (isAuth && !isOnboarded && !isOnboardingPage) {
+    fetch(new URL("/api/security-log", request.url), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(process.env.SECURITY_LOG_TOKEN ? { "x-log-token": process.env.SECURITY_LOG_TOKEN } : {}),
+      },
+      body: JSON.stringify({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: token?.id as string,
+        resource: pathname,
+        message: "Blocked by middleware (not onboarded user accessing authenticated pages that is not onboarding)",
+        req: request,
+      }),
+      keepalive: true,
+    }).catch(() => { });
     return NextResponse.redirect(new URL('/onboarding', request.url));
   }
 
   // 👤 Redirect authenticated users who are onboarded and trying to access onboarding page
   if (isAuth && isOnboarded && isOnboardingPage) {
+    fetch(new URL("/api/security-log", request.url), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(process.env.SECURITY_LOG_TOKEN ? { "x-log-token": process.env.SECURITY_LOG_TOKEN } : {}),
+      },
+      body: JSON.stringify({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: token?.id as string,
+        resource: pathname,
+        message: "Blocked by middleware (onboarded user accessing onboarding page)",
+        req: request,
+      }),
+      keepalive: true,
+    }).catch(() => { });
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   // 👤 Redirect non-tutor/admin users trying to access tutor/admin routes
   if (isTutorOrAdminRoute && isStudent) {
+
+    fetch(new URL("/api/security-log", request.url), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(process.env.SECURITY_LOG_TOKEN ? { "x-log-token": process.env.SECURITY_LOG_TOKEN } : {}),
+      },
+      body: JSON.stringify({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: token?.id as string,
+        resource: pathname,
+        message: "Blocked by middleware (non-tutor/admin accessing tutor/admin route)",
+        req: request,
+      }),
+      keepalive: true,
+    }).catch(() => { });
+    
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
   // 👋 Prevent authenticated users from accessing login/register again

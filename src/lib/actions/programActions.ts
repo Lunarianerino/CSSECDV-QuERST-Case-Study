@@ -1,16 +1,18 @@
 "use server"
-import {connectToMongoDB} from "../db";
-import {Account, Exam, ExamAnswers, ExamStatus, Program, SpecialExam} from "@/models";
-import {ProgramFormValues} from "@/lib/validations/program";
-import {authOptions} from "../auth";
-import {getServerSession} from "next-auth";
-import {AccountType} from "@/models/account";
-import {MongoServerError} from "mongodb";
-import {ExamTags} from "@/models/specialExam";
-import {BfiResultResponse, getBfiResultsAction} from "./bfiActions";
-import {getVarkResultsAction, VarkResultResponse} from "./varkActions";
-import {UserExamStatus} from "@/models/examStatus";
-import {PairingDetailed} from "@/lib/actions/pairingActions";
+import { connectToMongoDB } from "../db";
+import { Account, Exam, ExamAnswers, ExamStatus, Program, SpecialExam } from "@/models";
+import { ProgramFormValues, programSchema } from "@/lib/validations/program";
+import { authOptions } from "../auth";
+import { getServerSession } from "next-auth";
+import { AccountType } from "@/models/account";
+import { MongoServerError } from "mongodb";
+import { ExamTags } from "@/models/specialExam";
+import { BfiResultResponse, getBfiResultsAction } from "./bfiActions";
+import { getVarkResultsAction, VarkResultResponse } from "./varkActions";
+import { UserExamStatus } from "@/models/examStatus";
+import { PairingDetailed } from "@/lib/actions/pairingActions";
+import { logSecurityEvent, validateWithLogging } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 export interface ProgramsResponse {
 	success: boolean;
@@ -67,6 +69,13 @@ export const getPrograms = async (): Promise<ProgramsResponse> => {
 		const session = await getServerSession(authOptions);
 
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "getPrograms",
+				message: "Unauthorized access",
+			});
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -91,6 +100,14 @@ export const getPrograms = async (): Promise<ProgramsResponse> => {
 			}))
 		}));
 
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "getPrograms",
+			message: "Fetched all programs",
+		});
+
 		return {
 			success: true,
 			data: processed_programs,
@@ -99,6 +116,12 @@ export const getPrograms = async (): Promise<ProgramsResponse> => {
 
 	} catch (error) {
 		console.error("Error fetching programs:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "failure",
+			resource: "getPrograms",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -112,6 +135,13 @@ export const getTutorPrograms = async (): Promise<ProgramsResponse> => {
 	try {
 		const session = await getServerSession(authOptions);
 		if (!session || session.user?.type !== AccountType.TUTOR) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "getTutorPrograms",
+				message: "Unauthorized access",
+			});
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -122,7 +152,7 @@ export const getTutorPrograms = async (): Promise<ProgramsResponse> => {
 		await connectToMongoDB();
 		const tutorId = session.user?.id;
 		// get the programs tutor is assigned to
-		const programs: ProgramData[] = await Program.find({participants: tutorId});
+		const programs: ProgramData[] = await Program.find({ participants: tutorId });
 
 		// filter each program to show pairing and participants that are assigned to the tutor only
 		const processedPrograms: ProgramData[] = programs.map((program) => {
@@ -158,123 +188,130 @@ export const getTutorPrograms = async (): Promise<ProgramsResponse> => {
 		});
 
 		const studentsWithExams: StudentWithExams[] = await Promise.all(students.map(async (studentId): Promise<StudentWithExams> => {
-				// Find student details
-				const studentProfile = await Account.findOne({
-					_id: studentId
-				}, {password: 0});
+			// Find student details
+			const studentProfile = await Account.findOne({
+				_id: studentId
+			}, { password: 0 });
 
-				// Find all exam attempts for this student
-				const	examAttempts = await ExamStatus.find({
-					userId: studentId,
-					assignedBy: tutorId,
-				}).populate({
-					path: "examId",
-					model: "Exam"
-				}).sort({createdAt: -1});
+			// Find all exam attempts for this student
+			const examAttempts = await ExamStatus.find({
+				userId: studentId,
+				assignedBy: tutorId,
+			}).populate({
+				path: "examId",
+				model: "Exam"
+			}).sort({ createdAt: -1 });
 
-				// Process each exam attempt to calculate performance metrics
-				const exams = await Promise.all(examAttempts.map(async (attempt) => {
-					let correctAnswers = 0;
-					let incorrectAnswers = 0;
-					let skippedAnswers = 0;
+			// Process each exam attempt to calculate performance metrics
+			const exams = await Promise.all(examAttempts.map(async (attempt) => {
+				let correctAnswers = 0;
+				let incorrectAnswers = 0;
+				let skippedAnswers = 0;
 
-					// Only calculate detailed metrics for finished exams
-					if (attempt.status === UserExamStatus.FINISHED) {
-						// Get all answers for this attempt
-						const answers = await ExamAnswers.find({
-							_id: {$in: attempt.answers || []}
-						});
+				// Only calculate detailed metrics for finished exams
+				if (attempt.status === UserExamStatus.FINISHED) {
+					// Get all answers for this attempt
+					const answers = await ExamAnswers.find({
+						_id: { $in: attempt.answers || [] }
+					});
 
-						// Get all questions for this exam
-						const exam = await Exam.findById(attempt.examId._id).populate({
-							path: "questions",
-							populate: {
-								path: "choices",
-								model: "Choice"
-							}
-						});
+					// Get all questions for this exam
+					const exam = await Exam.findById(attempt.examId._id).populate({
+						path: "questions",
+						populate: {
+							path: "choices",
+							model: "Choice"
+						}
+					});
 
-						if (exam && exam.questions) {
-							// For each question, check if it was answered correctly
-							exam.questions.forEach(question => {
-								const answer = answers.find(a => a.questionId.toString() === question._id.toString());
+					if (exam && exam.questions) {
+						// For each question, check if it was answered correctly
+						exam.questions.forEach(question => {
+							const answer = answers.find(a => a.questionId.toString() === question._id.toString());
 
-								if (!answer || (!answer.answers_choice?.length && !answer.answer_text)) {
-									// Question was skipped
-									skippedAnswers++;
-								} else if (question.type === "choice") {
-									// Single choice question
-									const selectedId = answer.answers_choice[0];
-									// console.log(`${question.choices}`)
-									const selectedChoice = question.choices.find(c => c._id.toString() === selectedId);
+							if (!answer || (!answer.answers_choice?.length && !answer.answer_text)) {
+								// Question was skipped
+								skippedAnswers++;
+							} else if (question.type === "choice") {
+								// Single choice question
+								const selectedId = answer.answers_choice[0];
+								// console.log(`${question.choices}`)
+								const selectedChoice = question.choices.find(c => c._id.toString() === selectedId);
 
-									// console.log(`Selected ID: ${selectedId}`);
-									// console.log(`Selected Choice: ${selectedChoice}`);
-									if (selectedChoice?.isCorrect) {
+								// console.log(`Selected ID: ${selectedId}`);
+								// console.log(`Selected Choice: ${selectedChoice}`);
+								if (selectedChoice?.isCorrect) {
+									correctAnswers++;
+								} else {
+									incorrectAnswers++;
+								}
+							} else if (question.type === "multiple_choice") {
+								// Multiple choice question - consider partially correct
+								const choiceIds = answer.answers_choice;
+								const correctChoices = question.choices.filter(c => c.isCorrect).map(c => c._id.toString());
+								const selectedCorrect = choiceIds.filter(id => correctChoices.includes(id));
+
+								if (selectedCorrect.length === correctChoices.length && selectedCorrect.length === choiceIds.length) {
+									// All correct choices selected and no incorrect ones
+									correctAnswers++;
+								} else if (selectedCorrect.length > 0) {
+									// Partially correct
+									correctAnswers += 0.5;
+									incorrectAnswers += 0.5;
+								} else {
+									// All wrong
+									incorrectAnswers++;
+								}
+							} else {
+								// Text answer - use the score if available
+								if (answer.score) {
+									if (answer.score > 0) {
 										correctAnswers++;
 									} else {
-										incorrectAnswers++;
-									}
-								} else if (question.type === "multiple_choice") {
-									// Multiple choice question - consider partially correct
-									const choiceIds = answer.answers_choice;
-									const correctChoices = question.choices.filter(c => c.isCorrect).map(c => c._id.toString());
-									const selectedCorrect = choiceIds.filter(id => correctChoices.includes(id));
-
-									if (selectedCorrect.length === correctChoices.length && selectedCorrect.length === choiceIds.length) {
-										// All correct choices selected and no incorrect ones
-										correctAnswers++;
-									} else if (selectedCorrect.length > 0) {
-										// Partially correct
-										correctAnswers += 0.5;
-										incorrectAnswers += 0.5;
-									} else {
-										// All wrong
 										incorrectAnswers++;
 									}
 								} else {
-									// Text answer - use the score if available
-									if (answer.score) {
-										if (answer.score > 0) {
-											correctAnswers++;
-										} else {
-											incorrectAnswers++;
-										}
-									} else {
-										// Not graded yet
-										skippedAnswers++;
-									}
+									// Not graded yet
+									skippedAnswers++;
 								}
-							});
-						}
+							}
+						});
 					}
+				}
 
-					return {
-						id: attempt._id.toString(),
-						examId: attempt.examId._id.toString(),
-						name: attempt.examId.name,
-						description: attempt.examId.description,
-						status: attempt.status,
-						score: attempt.score,
-						maxScore: attempt.examId.questions?.length || 0,
-						correctAnswers: correctAnswers,
-						incorrectAnswers: incorrectAnswers,
-						skippedAnswers: skippedAnswers,
-						completedAt: attempt.completedAt ? attempt.completedAt.toISOString() : undefined,
-						attemptNumber: attempt.attemptNumber || 1
-					};
-				}));
-
-				// console.log(exams);
 				return {
-					id: studentId,
-					name: studentProfile.name,
-					email: studentProfile.email,
-					exams: exams
+					id: attempt._id.toString(),
+					examId: attempt.examId._id.toString(),
+					name: attempt.examId.name,
+					description: attempt.examId.description,
+					status: attempt.status,
+					score: attempt.score,
+					maxScore: attempt.examId.questions?.length || 0,
+					correctAnswers: correctAnswers,
+					incorrectAnswers: incorrectAnswers,
+					skippedAnswers: skippedAnswers,
+					completedAt: attempt.completedAt ? attempt.completedAt.toISOString() : undefined,
+					attemptNumber: attempt.attemptNumber || 1
 				};
-			})
+			}));
+
+			// console.log(exams);
+			return {
+				id: studentId,
+				name: studentProfile.name,
+				email: studentProfile.email,
+				exams: exams
+			};
+		})
 		);
 
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "getTutorPrograms",
+			message: "Fetched all programs for the tutor",
+		});
 		// console.log(studentsWithExams);
 		return {
 			success: true,
@@ -284,6 +321,12 @@ export const getTutorPrograms = async (): Promise<ProgramsResponse> => {
 		};
 	} catch (error) {
 		console.error("Error fetching programs:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "failure",
+			resource: "getPrograms",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -292,7 +335,7 @@ export const getTutorPrograms = async (): Promise<ProgramsResponse> => {
 	}
 }
 
-export const getTutorStudents = async () : Promise<PairedStudentsResponse> => {
+export const getTutorStudents = async (): Promise<PairedStudentsResponse> => {
 	try {
 		const session = await getServerSession(authOptions);
 		if (!session || session.user?.type !== AccountType.TUTOR) {
@@ -306,7 +349,7 @@ export const getTutorStudents = async () : Promise<PairedStudentsResponse> => {
 		await connectToMongoDB();
 		const tutorId = session.user?.id;
 		// get the programs tutor is assigned to
-		const programs: ProgramData[] = await Program.find({participants: tutorId});
+		const programs: ProgramData[] = await Program.find({ participants: tutorId });
 
 		// filter each program to show pairing and participants that are assigned to the tutor only
 		// copy-pasted from the previous function. theres a simpler way to handle this, but I just got lazy.
@@ -342,7 +385,7 @@ export const getTutorStudents = async () : Promise<PairedStudentsResponse> => {
 			return program.participants.filter(x => x);
 		});
 
-		const studentDetails : PairedStudentDetails[] = await Promise.all(students.map(async (student) => {
+		const studentDetails: PairedStudentDetails[] = await Promise.all(students.map(async (student) => {
 			const details = await Account.findById(student);
 			return {
 				id: student,
@@ -350,6 +393,14 @@ export const getTutorStudents = async () : Promise<PairedStudentsResponse> => {
 				email: details.email
 			};
 		}));
+
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "getTutorPrograms",
+			message: "Fetched tutor programs with participants",
+		});
 
 		return {
 			success: true,
@@ -360,6 +411,12 @@ export const getTutorStudents = async () : Promise<PairedStudentsResponse> => {
 
 	} catch (error) {
 		console.error("Error fetching programs:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "failure",
+			resource: "getTutorPrograms",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -371,8 +428,19 @@ export const getTutorStudents = async () : Promise<PairedStudentsResponse> => {
 export const createProgram = async (data: ProgramFormValues): Promise<ProgramsResponse> => {
 	try {
 		const session = await getServerSession(authOptions);
-
+		data = validateWithLogging(programSchema, data, {
+			userId: session?.user?.id,
+			resource: "createProgram",
+		});
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "createProgram",
+				message: "Unauthorized access",
+			});
+
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -382,35 +450,65 @@ export const createProgram = async (data: ProgramFormValues): Promise<ProgramsRe
 
 		await connectToMongoDB();
 		const program = new Program(data);
-		await program.save();
+		try {
+			await program.save();
+		} catch (error) {
+			if (error instanceof MongoServerError) {
+				console.error("Error creating program:", error);
+				if (error.code === 11000) {
+					await logSecurityEvent({
+						event: SecurityEvent.OPERATION_CREATE,
+						outcome: "failure",
+						userId: session?.user?.id,
+						resource: "program.create",
+						message: `Program "${program.title}" already exists.`,
+					});
 
+					return {
+						success: false,
+						error: "Program with this title already exists",
+						status: 400
+					};
+				}
+
+				await logSecurityEvent({
+					event: SecurityEvent.OPERATION_CREATE,
+					outcome: "failure",
+					userId: session?.user?.id,
+					resource: "createProgram",
+					message: error.message,
+				});
+				return {
+					success: false,
+					error: error.message,
+					status: 400
+				};
+			}
+		}
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_CREATE,
+			outcome: "success",
+			userId: session?.user?.id,
+			resource: "createProgram",
+			message: `Successfully created program: ${program.title}`,
+		});
 		return {
 			success: true,
 			status: 200
 		};
 	} catch (error) {
-		if (error instanceof MongoServerError) {
-			console.error("Error creating program:", error);
-			if (error.code === 11000) {
-				return {
-					success: false,
-					error: "Program with this title already exists",
-					status: 400
-				};
-			}
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_CREATE,
+			outcome: "failure",
+			resource: "createProgram",
+			message: error instanceof Error ? error.message : String(error),
+		});
 
-			return {
-				success: false,
-				error: error.message,
-				status: 400
-			};
-		} else {
-			return {
-				success: false,
-				error: "Internal Server Error",
-				status: 500
-			};
-		}
+		return {
+			success: false,
+			error: "Internal Server Error",
+			status: 500
+		};
 	}
 }
 
@@ -419,6 +517,13 @@ export const assignParticipantsToProgram = async (programId: string, userIds: st
 		const session = await getServerSession(authOptions);
 
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "assignParticipantsToProgram",
+				message: "Unauthorized access",
+			});
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -430,6 +535,13 @@ export const assignParticipantsToProgram = async (programId: string, userIds: st
 		const program = await Program.findById(programId);
 
 		if (!program) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "assignParticipantsToProgram",
+				message: "Program not found",
+			});
 			return {
 				success: false,
 				error: "Program not found",
@@ -440,12 +552,26 @@ export const assignParticipantsToProgram = async (programId: string, userIds: st
 		program.participants = [...new Set([...program.participants.map(id => id.toString()), ...userIds])];
 		await program.save();
 
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "assignParticipantsToProgram",
+			message: `Assigned ${userIds.length} participant(s) to program ${programId}`,
+		});
+
 		return {
 			success: true,
 			status: 200
 		};
 	} catch (error) {
 		console.error("Error assigning participants:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "assignParticipantsToProgram",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -459,6 +585,13 @@ export const removeParticipantFromProgram = async (programId: string, userId: st
 		const session = await getServerSession(authOptions);
 
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "removeParticipantFromProgram",
+				message: "Unauthorized access",
+			});
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -470,6 +603,13 @@ export const removeParticipantFromProgram = async (programId: string, userId: st
 		const program = await Program.findById(programId);
 
 		if (!program) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "removeParticipantFromProgram",
+				message: "Program not found",
+			});
 			return {
 				success: false,
 				error: "Program not found",
@@ -480,12 +620,26 @@ export const removeParticipantFromProgram = async (programId: string, userId: st
 		program.participants = program.participants.filter(id => id.toString() !== userId);
 		await program.save();
 
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "removeParticipantFromProgram",
+			message: `Removed participant ${userId} from program ${programId}`,
+		});
+
 		return {
 			success: true,
 			status: 200
 		};
 	} catch (error) {
 		console.error("Error removing participant:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "removeParticipantFromProgram",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -499,6 +653,13 @@ export const createPairing = async (programId: string, tutorId: string, studentI
 		const session = await getServerSession(authOptions);
 
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "createPairing",
+				message: "Unauthorized access",
+			});
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -510,6 +671,13 @@ export const createPairing = async (programId: string, tutorId: string, studentI
 		const program = await Program.findById(programId);
 
 		if (!program) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "createPairing",
+				message: "Program not found",
+			});
 			return {
 				success: false,
 				error: "Program not found",
@@ -517,8 +685,16 @@ export const createPairing = async (programId: string, tutorId: string, studentI
 			};
 		}
 
-		program.pairings.push({tutor: tutorId, student: studentId});
+		program.pairings.push({ tutor: tutorId, student: studentId });
 		await program.save();
+
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "createPairing",
+			message: `Paired tutor ${tutorId} with student ${studentId} in program ${programId}`,
+		});
 
 		return {
 			success: true,
@@ -526,6 +702,12 @@ export const createPairing = async (programId: string, tutorId: string, studentI
 		};
 	} catch (error) {
 		console.error("Error creating pairing:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "createPairing",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -539,6 +721,13 @@ export const removePairing = async (programId: string, pairingId: string): Promi
 		const session = await getServerSession(authOptions);
 
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "removePairing",
+				message: "Unauthorized access",
+			});
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -550,6 +739,13 @@ export const removePairing = async (programId: string, pairingId: string): Promi
 		const program = await Program.findById(programId);
 
 		if (!program) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "removePairing",
+				message: "Program not found",
+			});
 			return {
 				success: false,
 				error: "Program not found",
@@ -560,12 +756,26 @@ export const removePairing = async (programId: string, pairingId: string): Promi
 		program.pairings = program.pairings.filter(pairing => pairing.id !== pairingId);
 		await program.save();
 
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "removePairing",
+			message: `Removed pairing ${pairingId} from program ${programId}`,
+		});
+
 		return {
 			success: true,
 			status: 200
 		};
 	} catch (error) {
 		console.error("Error removing pairing:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "removePairing",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -586,8 +796,8 @@ export type PairingOptions = {
 };
 
 const defaultOptions = {
-	bfi: {enabled: true, weight: 1},
-	vark: {enabled: true, weight: 1},
+	bfi: { enabled: true, weight: 1 },
+	vark: { enabled: true, weight: 1 },
 } as const;
 
 export interface PairingSuggestion {
@@ -627,6 +837,13 @@ export const suggestPairings = async (programId: string, options: PairingOptions
 		const session = await getServerSession(authOptions);
 
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "suggestPairings",
+				message: "Unauthorized access",
+			});
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -642,6 +859,13 @@ export const suggestPairings = async (programId: string, options: PairingOptions
 		});
 
 		if (!program) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_READ,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "suggestPairings",
+				message: "Program not found",
+			});
 			return {
 				success: false,
 				error: "Program not found",
@@ -696,7 +920,7 @@ export const suggestPairings = async (programId: string, options: PairingOptions
 
 		// Clean tutor results (remove invalid tutors with errors)
 		for (const tutor of tutorList) {
-			const {valid, reasons} = cleanParticipantResults(tutor, options, "tutor");
+			const { valid, reasons } = cleanParticipantResults(tutor, options, "tutor");
 
 			if (!valid) {
 				pairingResults.push({
@@ -713,7 +937,7 @@ export const suggestPairings = async (programId: string, options: PairingOptions
 
 		// Clean student results (remove invalid students with errors)
 		for (const student of studentList) {
-			const {valid, reasons} = cleanParticipantResults(student, options, "student");
+			const { valid, reasons } = cleanParticipantResults(student, options, "student");
 
 			if (!valid) {
 				pairingResults.push({
@@ -749,7 +973,7 @@ export const suggestPairings = async (programId: string, options: PairingOptions
 			for (const tutor of tutorList) {
 				const tutorVector = vectorizeResults(tutor, options);
 				const similarity = calculateSimilarity(tutorVector, studentVector);
-				potentialMatches.push({tutorId: tutor.id, similarity});
+				potentialMatches.push({ tutorId: tutor.id, similarity });
 			}
 			potentialMatches.sort((a, b) => b.similarity - a.similarity);
 			console.log("Potential Matches for student", student.id, potentialMatches);
@@ -779,7 +1003,7 @@ export const suggestPairings = async (programId: string, options: PairingOptions
 				});
 			}
 		}
-
+		
 		return {
 			success: true,
 			data: pairingResults,
@@ -787,6 +1011,12 @@ export const suggestPairings = async (programId: string, options: PairingOptions
 		};
 	} catch (error) {
 		console.error("Error suggesting pairings:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "failure",
+			resource: "suggestPairings",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -800,6 +1030,13 @@ export const confirmSuggestedPairings = async (programId: string, pairings: Pair
 		const session = await getServerSession(authOptions);
 
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "confirmSuggestedPairings",
+				message: "Unauthorized access",
+			});
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -811,6 +1048,13 @@ export const confirmSuggestedPairings = async (programId: string, pairings: Pair
 		const program = await Program.findById(programId);
 
 		if (!program) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "confirmSuggestedPairings",
+				message: "Program not found",
+			});
 			return {
 				success: false,
 				error: "Program not found",
@@ -826,11 +1070,19 @@ export const confirmSuggestedPairings = async (programId: string, pairings: Pair
 			// Avoid duplicates
 			const exists = program.pairings.some(p => p.tutor.toString() === pairing.tutorId && p.student.toString() === pairing.studentId);
 			if (!exists) {
-				program.pairings.push({tutor: pairing.tutorId!, student: pairing.studentId!});
+				program.pairings.push({ tutor: pairing.tutorId!, student: pairing.studentId! });
 			}
 		}
 
 		await program.save();
+
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "confirmSuggestedPairings",
+			message: `Confirmed ${validPairings.length} pairing(s) for program ${programId}`,
+		});
 
 		return {
 			success: true,
@@ -838,6 +1090,12 @@ export const confirmSuggestedPairings = async (programId: string, pairings: Pair
 		};
 	} catch (error) {
 		console.error("Error confirming pairings:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "confirmSuggestedPairings",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -853,6 +1111,13 @@ export const getSimilarity = async (tutorId: string, studentId: string, options:
 		const session = await getServerSession(authOptions);
 
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "getSimilarity",
+				message: "Unauthorized access",
+			});
 			return {
 				success: false,
 				error: "Unauthorized",
@@ -898,6 +1163,14 @@ export const getSimilarity = async (tutorId: string, studentId: string, options:
 
 		pairingSuggestion.similarity = similarity;
 
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "getSimilarity",
+			message: `Calculated similarity for tutor ${tutorId} and student ${studentId}`,
+		});
+
 		return {
 			success: true,
 			data: pairingSuggestion,
@@ -905,6 +1178,12 @@ export const getSimilarity = async (tutorId: string, studentId: string, options:
 		};
 	} catch (error) {
 		console.error("Error calculating similarity:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "failure",
+			resource: "getSimilarity",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -975,8 +1254,8 @@ function vectorizeResults(participant: VariableResults, options: PairingOptions)
 function getPairingOptions(options: PairingOptions) {
 	const merged: PairingOptions = {
 		maxStudentsPerTutor: options.maxStudentsPerTutor ?? 1, //! Not yet implemented
-		bfi: {...defaultOptions.bfi, ...options.bfi},
-		vark: {...defaultOptions.vark, ...options.vark},
+		bfi: { ...defaultOptions.bfi, ...options.bfi },
+		vark: { ...defaultOptions.vark, ...options.vark },
 	};
 	return merged;
 }
@@ -1023,5 +1302,5 @@ function cleanParticipantResults(participant: VariableResults, options: PairingO
 		reasons.push(participant.varkResults ? participant.varkResults.message : "VARK results not found");
 	}
 
-	return {valid, reasons};
+	return { valid, reasons };
 }

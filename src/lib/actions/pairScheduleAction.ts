@@ -5,6 +5,8 @@ import { WeeklySchedule, TimeInterval } from "@/types/schedule";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Types } from "mongoose";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 // Constants
 const MINUTES_PER_SLOT = 60;
@@ -27,11 +29,24 @@ export async function savePairedScheduleAction(
     // Check if user is authenticated and is an admin
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.id) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "savePairedScheduleAction",
+        message: "Not authenticated",
+      });
       return { success: false, message: "Not authenticated", data: null };
     }
 
     // Verify the user is an admin
     if (session.user.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "savePairedScheduleAction",
+        message: "Only admins can pair schedules",
+      });
       return { success: false, message: "Only admins can pair schedules", data: null };
     }
 
@@ -44,6 +59,13 @@ export async function savePairedScheduleAction(
     });
 
     if (!userSchedules || userSchedules.length !== 2) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "savePairedScheduleAction",
+        message: "Could not find schedules for both users",
+      });
       return { success: false, message: "Could not find schedules for both users", data: null };
     }
 
@@ -57,6 +79,13 @@ export async function savePairedScheduleAction(
     const user2Schedule = schedulesMap[user2Id];
 
     if (!user1Schedule || !user2Schedule) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "savePairedScheduleAction",
+        message: "Missing schedule for one or both users",
+      });
       return { success: false, message: "Missing schedule for one or both users", data: null };
     }
 
@@ -97,6 +126,14 @@ export async function savePairedScheduleAction(
       });
     }
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "savePairedScheduleAction",
+      message: `Paired schedules for ${user1Id} and ${user2Id}`,
+    });
+
     return { 
       success: true, 
       message: "Paired schedules saved successfully", 
@@ -109,6 +146,12 @@ export async function savePairedScheduleAction(
     };
   } catch (error) {
     console.error("Error saving paired schedules:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "failure",
+      resource: "savePairedScheduleAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, message: "Failed to save paired schedules", data: null };
   }
 }

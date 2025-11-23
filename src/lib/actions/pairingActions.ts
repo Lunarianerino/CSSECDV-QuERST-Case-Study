@@ -9,6 +9,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AccountType } from "@/models/account";
 import { UserExamStatus } from "@/models/examStatus";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 export interface StudentWithExams {
   matchId: string;
@@ -42,11 +44,24 @@ export async function getPairedStudentsAction(): Promise<StudentWithExams[]> {
 
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "getPairedStudentsAction",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
 
     // Verify user is a tutor
     if (session.user.type !== AccountType.TUTOR) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getPairedStudentsAction",
+        message: "Only tutors can access paired students",
+      });
       throw new Error("Only tutors can access paired students");
     }
 
@@ -178,9 +193,23 @@ export async function getPairedStudentsAction(): Promise<StudentWithExams[]> {
       };
     }));
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getPairedStudentsAction",
+      message: `Fetched ${studentsWithExams.length} paired students`,
+    });
+
     return studentsWithExams;
   } catch (error) {
     console.error("Error fetching paired students:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getPairedStudentsAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to fetch paired students");
   }
 }
@@ -230,6 +259,13 @@ export async function createPairing({
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "createPairing",
+        message: "Not authorized to create pairings",
+      });
       throw new Error("Not authorized to create pairings");
     }
 
@@ -240,6 +276,13 @@ export async function createPairing({
 
     // Validate status against enum
     if (!Object.values(MatchStatus).includes(status as MatchStatus)) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_CREATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "createPairing",
+        message: "Invalid status",
+      });
       throw new Error("Invalid status");
     }
 
@@ -249,6 +292,14 @@ export async function createPairing({
       tutorId: new Types.ObjectId(tutorId),
       subject,
       status,
+    });
+
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_CREATE,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "createPairing",
+      message: `Created pairing ${newPairing._id.toString()}`,
     });
 
     return {
@@ -261,6 +312,12 @@ export async function createPairing({
     };
   } catch (error) {
     console.error("Error creating pairing:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_CREATE,
+      outcome: "failure",
+      resource: "createPairing",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to create pairing");
   }
 }
@@ -273,6 +330,13 @@ export async function getAllPairings(): Promise<PairingDetailed[]> {
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getAllPairings",
+        message: "Not authorized to view pairings",
+      });
       throw new Error("Not authorized to view pairings");
     }
 
@@ -285,7 +349,7 @@ export async function getAllPairings(): Promise<PairingDetailed[]> {
       .populate("tutorId", "_id name email");
 
     // Transform the data to a client-friendly format
-    return pairings.map((pairing: any) => ({
+    const mapped = pairings.map((pairing: any) => ({
       id: pairing._id.toString(),
       student: {
         id: pairing.studentId._id.toString(),
@@ -301,8 +365,22 @@ export async function getAllPairings(): Promise<PairingDetailed[]> {
       reason: pairing.reason,
       subject: pairing.subject,
     }));
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getAllPairings",
+      message: `Fetched ${mapped.length} pairing(s)`,
+    });
+    return mapped;
   } catch (error) {
     console.error("Error fetching pairings:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getAllPairings",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to fetch pairings");
   }
 }
@@ -315,6 +393,13 @@ export async function getPairingById(pairingId: string): Promise<PairingDetailed
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getPairingById",
+        message: "Not authorized to view this pairing",
+      });
       throw new Error("Not authorized to view this pairing");
     }
 
@@ -327,11 +412,18 @@ export async function getPairingById(pairingId: string): Promise<PairingDetailed
       .populate("tutorId", "_id name email");
 
     if (!pairing) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getPairingById",
+        message: "Pairing not found",
+      });
       return null;
     }
 
     // Transform the data to a client-friendly format
-    return {
+    const result = {
       id: pairing._id.toString(),
       student: {
         id: pairing.studentId._id.toString(),
@@ -347,8 +439,22 @@ export async function getPairingById(pairingId: string): Promise<PairingDetailed
       reason: pairing.reason,
       subject: pairing.subject,
     };
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getPairingById",
+      message: `Fetched pairing ${pairingId}`,
+    });
+    return result;
   } catch (error) {
     console.error("Error fetching pairing:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getPairingById",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to fetch pairing");
   }
 }
@@ -369,11 +475,25 @@ export async function updatePairingStatus({
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "updatePairingStatus",
+        message: "Not authorized to update pairings",
+      });
       throw new Error("Not authorized to update pairings");
     }
 
     // Validate status against enum
     if (!Object.values(MatchStatus).includes(status as MatchStatus)) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "updatePairingStatus",
+        message: "Invalid status",
+      });
       throw new Error("Invalid status");
     }
 
@@ -393,10 +513,17 @@ export async function updatePairingStatus({
     );
 
     if (!updatedPairing) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "updatePairingStatus",
+        message: "Pairing not found",
+      });
       return null;
     }
 
-    return {
+    const result = {
       id: updatedPairing._id.toString(),
       studentId: updatedPairing.studentId.toString(),
       tutorId: updatedPairing.tutorId.toString(),
@@ -404,8 +531,22 @@ export async function updatePairingStatus({
       reason: updatedPairing.reason,
       subject: updatedPairing.subject,
     };
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "updatePairingStatus",
+      message: `Updated pairing ${pairingId} to ${status}`,
+    });
+    return result;
   } catch (error) {
     console.error("Error updating pairing:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "failure",
+      resource: "updatePairingStatus",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to update pairing");
   }
 }
@@ -418,6 +559,13 @@ export async function deletePairing(pairingId: string): Promise<boolean> {
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "deletePairing",
+        message: "Not authorized to delete pairings",
+      });
       throw new Error("Not authorized to delete pairings");
     }
 
@@ -427,9 +575,24 @@ export async function deletePairing(pairingId: string): Promise<boolean> {
     // Delete the pairing
     const result = await Match.findByIdAndDelete(pairingId);
 
-    return !!result; // Return true if deletion was successful
+    const success = !!result;
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_DELETE,
+      outcome: success ? "success" : "failure",
+      userId: session.user?.id,
+      resource: "deletePairing",
+      message: success ? `Deleted pairing ${pairingId}` : "Pairing not found",
+    });
+
+    return success; // Return true if deletion was successful
   } catch (error) {
     console.error("Error deleting pairing:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_DELETE,
+      outcome: "failure",
+      resource: "deletePairing",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to delete pairing");
   }
 }
@@ -448,6 +611,13 @@ export async function getPairingsByUser({
     // Check if user is authorized (admin or the user themselves)
     const session = await getServerSession(authOptions);
     if (!session || (session.user?.id !== userId && session.user?.type !== AccountType.ADMIN)) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getPairingsByUser",
+        message: "Not authorized to view these pairings",
+      });
       throw new Error("Not authorized to view these pairings");
     }
 
@@ -465,7 +635,7 @@ export async function getPairingsByUser({
       .populate("tutorId", "_id name email");
 
     // Transform the data to a client-friendly format
-    return pairings.map((pairing: any) => ({
+    const mapped = pairings.map((pairing: any) => ({
       id: pairing._id.toString(),
       student: {
         id: pairing.studentId._id.toString(),
@@ -481,8 +651,22 @@ export async function getPairingsByUser({
       reason: pairing.reason,
       subject: pairing.subject,
     }));
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getPairingsByUser",
+      message: `Fetched ${mapped.length} pairing(s) for user ${userId}`,
+    });
+    return mapped;
   } catch (error) {
     console.error("Error fetching pairings by user:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getPairingsByUser",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to fetch pairings");
   }
 }
@@ -494,6 +678,12 @@ export async function getUserPairings(): Promise<PairingDetailed[]> {
  try {
   const session = await getServerSession(authOptions);
   if (!session) {
+    await logSecurityEvent({
+      event: SecurityEvent.ACCESS_DENIED,
+      outcome: "failure",
+      resource: "getUserPairings",
+      message: "Not authorized to view pairings",
+    });
     throw new Error("Not authorized to view pairings");
   }
   await connectToMongoDB();
@@ -505,7 +695,7 @@ export async function getUserPairings(): Promise<PairingDetailed[]> {
     ],
   }).populate("studentId", "_id name email").populate("tutorId", "_id name email");
 
-  return pairings.map((pairing: any) => ({
+  const mapped = pairings.map((pairing: any) => ({
     id: pairing._id.toString(),
     student: {
      id: pairing.studentId._id.toString(),
@@ -520,9 +710,23 @@ export async function getUserPairings(): Promise<PairingDetailed[]> {
     status: pairing.status,
     reason: pairing.reason,
     subject: pairing.subject,
-  }))
+  }));
+  await logSecurityEvent({
+    event: SecurityEvent.OPERATION_READ,
+    outcome: "success",
+    userId: session.user?.id,
+    resource: "getUserPairings",
+    message: `Fetched ${mapped.length} pairing(s) for current user`,
+  });
+  return mapped;
  } catch (error) {
   console.error("Error fetching pairings:", error);
+  await logSecurityEvent({
+    event: SecurityEvent.OPERATION_READ,
+    outcome: "failure",
+    resource: "getUserPairings",
+    message: error instanceof Error ? error.message : String(error),
+  });
   throw new Error("Failed to fetch pairings");
  }
 }

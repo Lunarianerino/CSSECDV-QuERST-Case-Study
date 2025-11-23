@@ -1,6 +1,5 @@
 import * as z from "zod"
 import { AccountType } from "@/models/account"
-import data from "@mongodb-js/saslprep/dist/code-points-data-browser";
 export const registerSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z

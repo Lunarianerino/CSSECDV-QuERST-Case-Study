@@ -34,7 +34,7 @@ export default async function Page() {
   const prevAttempt = user.prevLoginAttempt as { at?: Date | string; success?: boolean } | undefined;
 
   const lastUseBanner = prevAttempt?.at ? (
-    <Alert className="border-sky-600 text-sky-600 dark:border-sky-400 dark:text-sky-400 [&>svg]:translate-y-0'">
+    <Alert className="border-sky-600 text-sky-600 dark:border-sky-400 dark:text-sky-400 [&>svg]:translate-y-0' mb-8">
       <AlertCircleIcon />
       <AlertTitle className="font-bold">
         Last Login

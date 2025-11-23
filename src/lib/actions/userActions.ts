@@ -7,6 +7,8 @@ import { authOptions } from "@/lib/auth";
 import { BasicAccountInfo } from "@/types/accounts";
 import { CreateUserFormValues } from "@/lib/validations/auth";
 import { compareSync } from "bcrypt-ts";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 
 /**
@@ -18,6 +20,13 @@ export async function getTutorsAndStudentsAggregation() {
 		// Check if user is authorized (admin only)
 		const session = await getServerSession(authOptions);
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "getTutorsAndStudentsAggregation",
+				message: "Not authorized",
+			});
 			throw new Error("Not authorized to access user data");
 		}
 
@@ -77,6 +86,12 @@ export async function getTutorsAndStudentsAggregation() {
 		return tutorsAndStudents;
 	} catch (error) {
 		console.error("Error fetching tutors and students:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "failure",
+			resource: "getTutorsAndStudentsAggregation",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		throw new Error("Failed to fetch users");
 	}
 }
@@ -88,6 +103,12 @@ export async function getUserTypeById(userId: string): Promise<AccountType | nul
 		return user ? user.type : null;
 	} catch (error) {
 		console.error("Error fetching user type:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "failure",
+			resource: "getUserTypeById",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		throw new Error("Failed to fetch user type");
 	}
 }
@@ -97,6 +118,13 @@ export async function getAllUsers(): Promise<BasicAccountInfo[]> {
 		// Check if user is authorized (admin only)
 		const session = await getServerSession(authOptions);
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "getAllUsers",
+				message: "Not authorized",
+			});
 			throw new Error("Not authorized to access user data");
 		}
 
@@ -113,10 +141,23 @@ export async function getAllUsers(): Promise<BasicAccountInfo[]> {
 			}
 		})
 		// console.log("Formatted Users:", formattedUsers);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "getAllUsers",
+			message: `Fetched ${formattedUsers.length} users`,
+		});
 		return formattedUsers;
 
 	} catch (error) {
 		console.error("Error fetching users:", error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_READ,
+			outcome: "failure",
+			resource: "getAllUsers",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		throw new Error("Failed to fetch users");
 	}
 }
@@ -132,6 +173,13 @@ export async function createUser(form: CreateUserFormValues): Promise<UserAction
 	try {
 		const session = await getServerSession(authOptions);
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "createUser",
+				message: "Unauthorized action",
+			});
 			return {
 				success: false,
 				error: "Unauthorized action",
@@ -145,6 +193,13 @@ export async function createUser(form: CreateUserFormValues): Promise<UserAction
 		const userFound = await Account.findOne({ email: form.email });
 
 		if (userFound) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_CREATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "createUser",
+				message: "User already exists",
+			});
 			return {
 				success: false,
 				error: "User already exists",
@@ -161,11 +216,25 @@ export async function createUser(form: CreateUserFormValues): Promise<UserAction
 
 		await user.save();
 
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_CREATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "createUser",
+			message: `Created user ${form.email}`,
+		});
+
 		return {
 			success: true,
 			status: 200
 		}
 	} catch (error) {
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_CREATE,
+			outcome: "failure",
+			resource: "createUser",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			error: "Internal Server Error",
@@ -178,6 +247,13 @@ export async function disableUser(disabled: boolean, userId: string): Promise<Us
 	try {
 		const session = await getServerSession(authOptions);
 		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "disableUser",
+				message: "Unauthorized action",
+			});
 			return {
 				success: false,
 				error: "Unauthorized action",
@@ -190,6 +266,13 @@ export async function disableUser(disabled: boolean, userId: string): Promise<Us
 		const user = await Account.findById(userId);
 
 		if (session.user.id === userId || user.type === AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "disableUser",
+				message: "Attempt to disable self/admin",
+			});
 			return {
 				success: false,
 				error: "This account can't be disabled",
@@ -210,12 +293,26 @@ export async function disableUser(disabled: boolean, userId: string): Promise<Us
 				disabled: updatedUser.disabled,
 			}
 			//console.log("updatedUser:", updatedUser);
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "success",
+				userId: session.user?.id,
+				resource: "disableUser",
+				message: `${disabled ? "Disabled" : "Enabled"} user ${userId}`,
+			});
 			return {
 				success: true,
 				status: 200,
 				data: formattedUpdatedUser
 			}
 		} else {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "disableUser",
+				message: "User does not exist",
+			});
 			return {
 				success: false,
 				status: 404,
@@ -223,6 +320,12 @@ export async function disableUser(disabled: boolean, userId: string): Promise<Us
 			}
 		}
 	} catch (error) {
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "disableUser",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			status: 500,
@@ -235,6 +338,12 @@ export async function changePassword(oldPassword: string, newPassword: string, c
 	try {
 		const session = await getServerSession(authOptions);
 		if (!session) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				resource: "changePassword",
+				message: "Unauthorized action",
+			});
 			return {
 				success: false,
 				error: "Unauthorized action",
@@ -242,6 +351,13 @@ export async function changePassword(oldPassword: string, newPassword: string, c
 			}
 		}
 		if (newPassword !== confirmPassword) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "changePassword",
+				message: "New password mismatch",
+			});
 			return {
 				success: false,
 				error: "New password and confirm password do not match",
@@ -250,6 +366,13 @@ export async function changePassword(oldPassword: string, newPassword: string, c
 		}
 
 		if (oldPassword == newPassword) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "changePassword",
+				message: "New password equals old password",
+			});
 			return {
 				success: false,
 				error: "New password cannot be the same as the old one",
@@ -260,6 +383,13 @@ export async function changePassword(oldPassword: string, newPassword: string, c
 		await connectToMongoDB();
 		const user = await Account.findById(session.user.id);
 		if (!user) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "changePassword",
+				message: "User does not exist",
+			});
 			return {
 				success: false,
 				error: "User does not exist",
@@ -270,6 +400,13 @@ export async function changePassword(oldPassword: string, newPassword: string, c
 		const oldPasswordMatches = compareSync(oldPassword, user.password);
 
 		if (!oldPasswordMatches) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "changePassword",
+				message: "Old password incorrect",
+			});
 			return {
 				success: false,
 				error: "Old password is incorrect",
@@ -282,6 +419,13 @@ export async function changePassword(oldPassword: string, newPassword: string, c
 		const lastChanged = user.passwordChangedAt ? user.passwordChangedAt.getTime() : 0;
 		console.log(lastChanged);
 		if (now - lastChanged < MIN_AGE_MS) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "changePassword",
+				message: "Password changed too recently",
+			});
 			return {
 				success: false,
 				error: "Password was changed less than 24 hours ago",
@@ -297,6 +441,13 @@ export async function changePassword(oldPassword: string, newPassword: string, c
 			history.some((entry) => compareSync(newPassword, entry.hash));
 
 		if (reused) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "changePassword",
+				message: "Password reuse detected",
+			});
 			return {
 				success: false,
 				error: "You cannot reuse a recent password",
@@ -314,12 +465,26 @@ export async function changePassword(oldPassword: string, newPassword: string, c
 		user.password = newPassword; // pre-save hook will hash this
 		await user.save();
 
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "changePassword",
+			message: "Password changed successfully",
+		});
+
 		return {
 			success: true,
 			status: 200,
 		};
 	} catch (error) {
 		console.log(error);
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "changePassword",
+			message: error instanceof Error ? error.message : String(error),
+		});
 		return {
 			success: false,
 			status: 500,

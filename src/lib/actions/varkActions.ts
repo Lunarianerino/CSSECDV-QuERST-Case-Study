@@ -11,6 +11,8 @@ import mongoose from "mongoose";
 import { ExamTags } from "@/models/specialExam";
 import { User } from "lucide-react";
 import { UserExamStatus } from "@/models/examStatus";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 // Interface for the VARK mapping data
 export interface VarkMapping {
@@ -32,11 +34,25 @@ export async function getExamsForVarkAction() {
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getExamsForVarkAction",
+        message: "Not authorized",
+      });
       throw new Error("Not authorized to access user data");
     }
     const exams = await Exam.find({type: ExamTypes.VARK});
     const markedVark = await SpecialExam.find({tag: ExamTags.VARK});
     const markedVarkIds = markedVark.map((vark: any) => vark.examId.toString());
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getExamsForVarkAction",
+      message: "Retrieved VARK exams",
+    });
     return {
       success: true,
       message: "Exams retrieved successfully",
@@ -49,6 +65,12 @@ export async function getExamsForVarkAction() {
     };
   } catch (error) {
     console.error("Error retrieving exams:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getExamsForVarkAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, message: "Failed to retrieve exams", data: null };
   }
 }
@@ -61,6 +83,13 @@ export async function getExamDetailsForVarkAction(examId: string) {
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getExamDetailsForVarkAction",
+        message: "Not authorized",
+      });
       throw new Error("Not authorized to access user data");
     }
     
@@ -80,6 +109,13 @@ export async function getExamDetailsForVarkAction(examId: string) {
     });
 
     if (!exam) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getExamDetailsForVarkAction",
+        message: "Exam not found",
+      });
       return { success: false, message: "Exam not found", data: null };
     }
 
@@ -93,7 +129,13 @@ export async function getExamDetailsForVarkAction(examId: string) {
     existingMappings.forEach((mapping: any) => {
       mappingsMap.set(mapping.answerId.toString(), mapping.attribute);
     });
-
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getExamDetailsForVarkAction",
+      message: `Retrieved VARK exam details for ${examId}`,
+    });
     return {
       success: true,
       message: "Exam details retrieved successfully",
@@ -116,6 +158,12 @@ export async function getExamDetailsForVarkAction(examId: string) {
     };
   } catch (error) {
     console.error("Error retrieving exam details:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getExamDetailsForVarkAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, message: "Failed to retrieve exam details", data: null };
   }
 }
@@ -131,12 +179,26 @@ export async function saveVarkMappingsAction(data: VarkSubmissionData) {
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "saveVarkMappingsAction",
+        message: "Not authorized",
+      });
       throw new Error("Not authorized to access user data");
     }
 
     // Validate exam exists
     const exam = await Exam.findById(data.examId);
     if (!exam) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "saveVarkMappingsAction",
+        message: "Exam not found",
+      });
       return { success: false, message: "Exam not found" };
     }
 
@@ -161,12 +223,26 @@ export async function saveVarkMappingsAction(data: VarkSubmissionData) {
       { upsert: true, new: true }
     );
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "saveVarkMappingsAction",
+      message: "Saved VARK mappings",
+    });
+
     return { 
       success: true, 
       message: "VARK mappings saved successfully" 
     };
   } catch (error) {
     console.error("Error saving VARK mappings:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "failure",
+      resource: "saveVarkMappingsAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, message: "Failed to save VARK mappings" };
   }
 }
@@ -188,12 +264,26 @@ export async function getVarkResultsAction(userId: string):Promise<VarkResultRes
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type!== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getVarkResultsAction",
+        message: "Not authorized",
+      });
       throw new Error("Not authorized to access user data");
     }
 
     // Get user details
     const user = await Account.findById(userId);
     if (!user) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getVarkResultsAction",
+        message: "User not found",
+      });
       throw new Error("User not found");
     }
 
@@ -202,6 +292,13 @@ export async function getVarkResultsAction(userId: string):Promise<VarkResultRes
     const examId = specialExam?.examId.toString();
 
     if (!examId) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getVarkResultsAction",
+        message: "VARK exam not found",
+      });
       throw new Error("VARK exam not found");
     }
 
@@ -215,12 +312,26 @@ export async function getVarkResultsAction(userId: string):Promise<VarkResultRes
     }).sort({ attemptNumber: -1 }).limit(1);
 
     if (!userAnswers || userAnswers.length === 0) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getVarkResultsAction",
+        message: "User VARK exam not found",
+      });
       return { success: false, message: "User VARK exam not found", data: null };
     }
 
     const latestUserAnswer = userAnswers[0].answers;
 
     if (userAnswers[0].status !== UserExamStatus.FINISHED) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getVarkResultsAction",
+        message: "User VARK exam not finished",
+      });
       return { success: false, message: "User VARK exam not finished", data: null };
     }
 
@@ -247,12 +358,25 @@ export async function getVarkResultsAction(userId: string):Promise<VarkResultRes
 
     // console.log(varkResults);
     // console.log(varkDetails);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getVarkResultsAction",
+      message: `Retrieved VARK results for user ${userId}`,
+    });
     return {
       success: true,
       message: "VARK results retrieved successfully",
       data: varkResults,
     }
   } catch (error) {
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getVarkResultsAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to get VARK results: " + error);
   }
 }

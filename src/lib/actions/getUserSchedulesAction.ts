@@ -5,6 +5,8 @@ import { WeeklySchedule } from "@/types/schedule";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Types } from "mongoose";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 /**
  * Get schedules for specific users by their IDs
@@ -15,6 +17,13 @@ export async function getUserSchedulesAction(userIds: string[]) {
     // Check if user is authenticated and is an admin
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.id) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getUserSchedulesAction",
+        message: "Not authenticated",
+      });
       return { success: false, message: "Not authenticated", data: null };
     }
 
@@ -37,6 +46,14 @@ export async function getUserSchedulesAction(userIds: string[]) {
       return acc;
     }, {} as Record<string, WeeklySchedule>);
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getUserSchedulesAction",
+      message: `Retrieved schedules for ${userSchedules.length} user(s)`,
+    });
+
     return { 
       success: true, 
       message: "Schedules retrieved successfully", 
@@ -44,6 +61,12 @@ export async function getUserSchedulesAction(userIds: string[]) {
     };
   } catch (error) {
     console.error("Error retrieving schedules:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getUserSchedulesAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, message: "Failed to retrieve schedules", data: null };
   }
 }

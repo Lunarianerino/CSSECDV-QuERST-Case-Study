@@ -10,6 +10,8 @@ import { MatchStatus } from "@/models/match";
 import { WeeklySchedule } from "@/types/schedule";
 import { SpecialExam } from "@/models";
 import { ExamTags } from "@/models/specialExam";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 export interface UserProfile {
   id: string;
   name: string;
@@ -49,17 +51,37 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
 
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "getUserProfileAction",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
 
     // Only admins can view other users' profiles
     if (session.user.id !== userId && session.user.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getUserProfileAction",
+        message: "Not authorized to view this profile",
+      });
       throw new Error("Not authorized to view this profile");
     }
 
     // Get user details
     const user = await Account.findById(userId);
     if (!user) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getUserProfileAction",
+        message: "User not found",
+      });
       return null;
     }
 
@@ -175,6 +197,14 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
       }));
     }
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getUserProfileAction",
+      message: `Retrieved profile for user ${userId}`,
+    });
+
     return {
       id: user._id.toString(),
       name: user.name,
@@ -189,6 +219,12 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
     };
   } catch (error) {
     console.error("Error fetching user profile:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getUserProfileAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to fetch user profile");
   }
 }

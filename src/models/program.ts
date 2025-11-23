@@ -15,6 +15,6 @@ export const ProgramSchema = new Schema<IProgram>({
     description: { type: String, required: true },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
-    participants: [{ type: Types.ObjectId, ref: "Account" }],
-    pairings: [{ tutor: { type: Types.ObjectId, ref: "Account" }, student: { type: Types.ObjectId, ref: "Account" } }]
+    participants: [{ type: Schema.Types.ObjectId, ref: "Account" }],
+    pairings: [{ tutor: { type: Schema.Types.ObjectId, ref: "Account" }, student: { type: Schema.Types.ObjectId, ref: "Account" } }]
 });

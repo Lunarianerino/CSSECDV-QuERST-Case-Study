@@ -6,6 +6,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { UserExamStatus } from "@/models/examStatus";
 import { ExamTypes } from "@/models/exam";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 export interface AssignedExam {
   id: string;
   examId: string;
@@ -27,6 +29,12 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
 
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "getAssignedExamsAction",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
 
@@ -38,7 +46,7 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
 
     const filteredExams = assignedExams.filter(e => e.examId.disabled === false || e.examId.disabled === undefined || e.examId.disabled === null);
     // Transform the data to a client-friendly format
-    return filteredExams.map((examStatus: any) => {
+    const mapped = filteredExams.map((examStatus: any) => {
       // Determine results status
       let results = "Not Graded";
       if (examStatus.status === UserExamStatus.FINISHED && examStatus.score !== undefined) {
@@ -61,8 +69,22 @@ export async function getAssignedExamsAction(): Promise<AssignedExam[]> {
         disabled: examStatus.examId.disabled? examStatus.examId.disabled : false,
       };
     });
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getAssignedExamsAction",
+      message: `Fetched ${mapped.length} assigned exam(s)`,
+    });
+    return mapped;
   } catch (error) {
     console.error("Error fetching assigned exams:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getAssignedExamsAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to fetch assigned exams");
   }
 }

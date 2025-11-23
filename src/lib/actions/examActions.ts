@@ -9,6 +9,8 @@ import getUserDetails from "../queries/getUserDetails";
 import { AccountType } from "@/models/account";
 import { getUserTypeById } from "./userActions";
 import { ExamTypes } from "@/models/exam";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 //TODO: rename ExamStatus to Attempt
 export interface ExamDetailsWithAnswers {
   id: string;
@@ -204,17 +206,37 @@ export async function saveExamAnswerAction(
 
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "saveExamAnswerAction",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
 
     // Find the exam status for this attempt
     const examStatus = await ExamStatus.findById(attemptId);
     if (!examStatus) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "saveExamAnswerAction",
+        message: "Exam attempt not found",
+      });
       throw new Error("Exam attempt not found");
     }
 
     // Check if the exam is still in progress
     if (examStatus.status === UserExamStatus.FINISHED) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "saveExamAnswerAction",
+        message: "Attempt to modify finished exam",
+      });
       throw new Error("Cannot modify answers for a completed exam");
     }
 
@@ -257,10 +279,22 @@ export async function saveExamAnswerAction(
       // console.log(examStatus.answers);
       await examStatus.save();
     }
-
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_CREATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "saveExamAnswerAction",
+        message: `Answered exam status ${examStatus.id}`,
+      });
     return { success: true, message: "Answer saved" };
   } catch (error) {
     console.error("Error saving answer:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "failure",
+      resource: "saveExamAnswerAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to save answer");
   }
 }
@@ -274,6 +308,12 @@ export async function setStartedExamStatusAction(attemptId: string) {
 
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "setStartedExamStatusAction",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
     const userId = session.user.id;
@@ -287,11 +327,25 @@ export async function setStartedExamStatusAction(attemptId: string) {
     const examAttempt = await ExamStatus.findById(attemptId);
 
     if (!examAttempt) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "setStartedExamStatusAction",
+        message: "Exam attempt not found",
+      });
       throw new Error("Exam attempt not found");
     }
 
     // Verify this attempt belongs to the current user
     if (examAttempt.userId.toString() !== userId) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "setStartedExamStatusAction",
+        message: "Attempt access denied",
+      });
       throw new Error("Not authorized to access this exam attempt");
     }
 
@@ -313,6 +367,12 @@ export async function setStartedExamStatusAction(attemptId: string) {
     };
   } catch (error) {
     console.error("Error saving exam status:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "failure",
+      resource: "setStartedExamStatusAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to save exam status");
   }
 }
@@ -323,6 +383,12 @@ export async function setFinishedExamStatusAction(attemptId: string) {
 
     const session = await getServerSession(authOptions); 
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "setFinishedExamStatusAction",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated"); 
     }
     const userId = session.user.id;
@@ -330,17 +396,39 @@ export async function setFinishedExamStatusAction(attemptId: string) {
     const examAttempt = await ExamStatus.findById(attemptId);
 
     if (!examAttempt) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "setFinishedExamStatusAction",
+        message: "Exam attempt not found",
+      });
       throw new Error("Exam attempt not found");
     }
 
     // Verify this attempt belongs to the current user
     if (examAttempt.userId.toString() !== userId) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "setFinishedExamStatusAction",
+        message: "Attempt access denied",
+      });
       throw new Error("Not authorized to access this exam attempt");
     }
 
     examAttempt.status = UserExamStatus.FINISHED;
     examAttempt.completedAt = new Date();
     await examAttempt.save();  
+
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "setFinishedExamStatusAction",
+      message: `Finished exam attempt ${attemptId}`,
+    });
 
     return {
       success: true,
@@ -350,6 +438,12 @@ export async function setFinishedExamStatusAction(attemptId: string) {
 
   } catch (error) {
     console.error("Error saving exam status:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "failure",
+      resource: "setFinishedExamStatusAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to save exam status");
   }
 }
@@ -365,6 +459,12 @@ export async function assignExamToUserAction(
 
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "assignExamToUserAction",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
 
@@ -379,9 +479,14 @@ export async function assignExamToUserAction(
           asigneeType === AccountType.STUDENT
         )
       ) {
-        throw new Error(
-          `This user cannot assign exams to a user that is an ${asigneeType}.`
-        );
+        await logSecurityEvent({
+          event: SecurityEvent.ACCESS_DENIED,
+          outcome: "failure",
+          userId: session.user?.id,
+          resource: "assignExamToUserAction",
+          message: `Unauthorized assignment to ${asigneeType}`,
+        });
+        throw new Error(`This user cannot assign exams to a user that is an ${asigneeType}.`);
       }
     }
 
@@ -389,6 +494,13 @@ export async function assignExamToUserAction(
     const exam = await Exam.findById(examId);
 
     if (!exam) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_CREATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "assignExamToUserAction",
+        message: "Exam not found",
+      });
       throw new Error("Exam not found");
     }
 
@@ -419,6 +531,12 @@ export async function assignExamToUserAction(
     };
   } catch (error) {
     console.error("Error saving exam status:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_CREATE,
+      outcome: "failure",
+      resource: "assignExamToUserAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to save exam status");
   }
 }
@@ -438,6 +556,12 @@ export async function getExams(): Promise<ExamListItem[]> {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "getExams",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
 
@@ -447,6 +571,13 @@ export async function getExams(): Promise<ExamListItem[]> {
       sessionType !== AccountType.ADMIN &&
       sessionType !== AccountType.TUTOR
     ) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getExams",
+        message: "Not authorized",
+      });
       throw new Error("Not authorized");
     }
 
@@ -455,15 +586,29 @@ export async function getExams(): Promise<ExamListItem[]> {
 
     const exams = await Exam.find(filter);
 
-    return exams.map((exam) => ({
+    const mapped = exams.map((exam) => ({
       id: exam._id.toString(),
       name: exam.name,
       description: exam.description,
       required: exam.required,
       graded: exam.graded,
     }));
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getExams",
+      message: `Fetched ${mapped.length} exam(s)`,
+    });
+    return mapped;
   } catch (error) {
     console.error("Error fetching exams:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getExams",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to fetch exams");
   }
 }
@@ -478,11 +623,24 @@ export async function getAssignedUsers(examId: string) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "getAssignedUsers",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
     const exam = await Exam.findById(examId);
   
     if (!exam) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getAssignedUsers",
+        message: "Exam not found",
+      });
       throw new Error("Exam not found");
     }
   
@@ -491,14 +649,35 @@ export async function getAssignedUsers(examId: string) {
       exam.createdBy !== session.user.id &&
       session.user.type !== AccountType.ADMIN
     ) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getAssignedUsers",
+        message: "Not authorized to view assigned users",
+      });
       throw new Error("You are not authorized to assign users to this exam");
     }
   
     const assignedUsers = await ExamStatus.find({ examId: examId });
   
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getAssignedUsers",
+      message: `Fetched ${assignedUsers.length} assigned user(s) for exam ${examId}`,
+    });
+
     return assignedUsers;
   } catch (error) {
     console.error("Error fetching assigned users:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getAssignedUsers",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to fetch assigned users"); 
   }
 
@@ -508,6 +687,12 @@ export async function getAssignedExams() {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "getAssignedExams",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
   
@@ -543,9 +728,22 @@ export async function getAssignedExams() {
     // Convert map to array
     const result = Array.from(examMap.values());
     
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getAssignedExams",
+      message: `Fetched assigned exams: ${result.length}`,
+    });
     return result;
   } catch (error) {
     console.error("Error fetching assigned exams:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getAssignedExams",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to fetch assigned exams");
   }
 }
@@ -554,6 +752,12 @@ export async function autoAssignExams() {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "autoAssignExams",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
   
@@ -582,13 +786,27 @@ export async function autoAssignExams() {
         examId: exam._id,
       });
     }
-  
+ 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_CREATE,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "autoAssignExams",
+      message: "Auto-assigned exams based on user type",
+    });
+
     return {
       success: true,
       message: "Exams assigned successfully.", 
     };    
   } catch (error) {
     console.error("Error auto-assigning exams:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_CREATE,
+      outcome: "failure",
+      resource: "autoAssignExams",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to auto-assign exams"); 
   }
 }
@@ -600,16 +818,43 @@ export async function getExamTypes(): Promise<ExamTypes[]> {
 
   const session = await getServerSession(authOptions);
   if (!session) {
+    await logSecurityEvent({
+      event: SecurityEvent.ACCESS_DENIED,
+      outcome: "failure",
+      resource: "getExamTypes",
+      message: "Not authenticated",
+    });
     throw new Error("Not authenticated");
   }
 
   const sessionType = session.user.type;
 
   if (sessionType === AccountType.ADMIN) {
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getExamTypes",
+      message: "Returned all exam types",
+    });
     return Object.values(ExamTypes);
   } else if (sessionType === AccountType.TUTOR) {
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getExamTypes",
+      message: "Returned tutor exam types",
+    });
     return [ExamTypes.SUMMATIVE, ExamTypes.FORMATIVE];
   } else {
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getExamTypes",
+      message: "Returned no exam types for student",
+    });
     return [];
   }
 }
@@ -618,15 +863,35 @@ export async function assignExamsToAll(tutors: boolean, students: boolean, examI
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "assignExamsToAll",
+        message: "Not authenticated",
+      });
       throw new Error("Not authenticated");
     }
 
     if (session.user.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "assignExamsToAll",
+        message: "Not authorized",
+      });
       throw new Error("Not authorized");
     }
 
     const exam = await Exam.findById(examId);
     if (!exam) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_CREATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "assignExamsToAll",
+        message: "Exam not found",
+      });
       throw new Error("Exam not found");
     }
 
@@ -671,12 +936,25 @@ export async function assignExamsToAll(tutors: boolean, students: boolean, examI
         });
       }
     }
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_CREATE,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "assignExamsToAll",
+      message: `Assigned exam ${examId} to tutors:${tutors} students:${students}`,
+    });
     return {
       success: true,
       message: "Exams assigned successfully.",
     }
   } catch (error) {
     console.error("Error assigning exams:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_CREATE,
+      outcome: "failure",
+      resource: "assignExamsToAll",
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new Error("Failed to assign exams");
   }
 }

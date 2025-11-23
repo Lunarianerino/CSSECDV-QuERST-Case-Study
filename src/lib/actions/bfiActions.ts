@@ -18,6 +18,8 @@ import { ExamTypes } from "@/models/exam";
 import { ExamTags } from "@/models/specialExam";
 import mongoose from "mongoose";
 import { UserExamStatus } from "@/models/examStatus";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 // Interface for the BFI mapping data
 export interface BfiMapping {
@@ -40,6 +42,13 @@ export async function getExamsForBfiAction() {
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getExamsForBfiAction",
+        message: "Unauthorized access",
+      });
       throw new Error("Not authorized to access user data");
     }
     // const exams = await Exam.find({});
@@ -53,6 +62,14 @@ export async function getExamsForBfiAction() {
 
     const markedBfiIds = markedBfi.map((exam: any) => exam.examId.toString());
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getExamsForBfiAction",
+      message: "Retrieved exams for BFI selection",
+    });
+
     return {
       success: true,
       message: "Exams retrieved successfully",
@@ -65,6 +82,12 @@ export async function getExamsForBfiAction() {
     };
   } catch (error) {
     console.error("Error retrieving exams:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getExamsForBfiAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, message: "Failed to retrieve exams", data: null };
   }
 }
@@ -77,6 +100,13 @@ export async function getExamDetailsForBfiAction(examId: string) {
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getExamDetailsForBfiAction",
+        message: "Unauthorized access",
+      });
       throw new Error("Not authorized to access user data");
     }
 
@@ -91,6 +121,13 @@ export async function getExamDetailsForBfiAction(examId: string) {
     });
 
     if (!exam) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getExamDetailsForBfiAction",
+        message: "Exam not found",
+      });
       return { success: false, message: "Exam not found", data: null };
     }
 
@@ -108,6 +145,14 @@ export async function getExamDetailsForBfiAction(examId: string) {
       });
     });
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getExamDetailsForBfiAction",
+      message: `Retrieved BFI exam details for ${examId}`,
+    });
+    
     return {
       success: true,
       message: "Exam details retrieved successfully",
@@ -131,8 +176,15 @@ export async function getExamDetailsForBfiAction(examId: string) {
         })),
       },
     };
+
   } catch (error) {
     console.error("Error retrieving exam details:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getExamDetailsForBfiAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return {
       success: false,
       message: "Failed to retrieve exam details",
@@ -149,12 +201,26 @@ export async function saveBfiMappingsAction(data: BfiSubmissionData) {
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "saveBfiMappingsAction",
+        message: "Unauthorized access",
+      });
       throw new Error("Not authorized to access user data");
     }
 
     // Validate exam exists
     const exam = await Exam.findById(data.examId);
     if (!exam) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "saveBfiMappingsAction",
+        message: "Exam not found",
+      });
       return { success: false, message: "Exam not found" };
     }
 
@@ -177,12 +243,26 @@ export async function saveBfiMappingsAction(data: BfiSubmissionData) {
       { upsert: true }
     );
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "saveBfiMappingsAction",
+      message: "Saved BFI mappings",
+    });
+
     return {
       success: true,
       message: "BFI mappings saved successfully",
     };
   } catch (error) {
     console.error("Error saving BFI mappings:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "failure",
+      resource: "saveBfiMappingsAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, message: "Failed to save BFI mappings" };
   }
 }
@@ -223,12 +303,26 @@ export async function getBfiResultsAction(
     // Check if user is authorized (admin only)
     const session = await getServerSession(authOptions);
     if (!session || session.user?.type !== AccountType.ADMIN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "getBfiResultsAction",
+        message: "Unauthorized access",
+      });
       throw new Error("Not authorized to access user data");
     }
 
     // Get user details
     const user = await Account.findById(userId);
     if (!user) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_READ,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "getBfiResultsAction",
+        message: "User not found",
+      });
       throw new Error("User not found");
     }
     // The way to calculate the BFI results is to sum up the scores of all the questions
@@ -318,6 +412,14 @@ export async function getBfiResultsAction(
       }
     }
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "getBfiResultsAction",
+      message: `Retrieved BFI results for user ${userId}`,
+    });
+
     return {
       success: true,
       message: "BFI results retrieved successfully",
@@ -325,6 +427,12 @@ export async function getBfiResultsAction(
     };
   } catch (error) {
     console.error("Error getting BFI results:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "getBfiResultsAction",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return { success: false, message: "Failed to get BFI results", data: null };
   }
 }

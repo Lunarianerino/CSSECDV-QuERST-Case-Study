@@ -5,6 +5,8 @@ import { Exam, Question, Choice } from "@/models"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth";
 import { AccountType } from "@/models/account";
+import { logSecurityEvent } from "../securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 // Note: No database schema changes needed as the existing text fields
 // can store markdown content without modification
 export const createExam = async (values: ExamFormValues) => {
@@ -14,6 +16,13 @@ export const createExam = async (values: ExamFormValues) => {
 
     //TODO: tutors and admins can create exams
     if (!session || session.user?.type === AccountType.STUDENT || session.user?.type === AccountType.UNKNOWN) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session?.user?.id,
+        resource: "createExam",
+        message: "Unauthorized access",
+      });
       return { 
         success: false, 
         error: "Unauthorized", 
@@ -73,12 +82,25 @@ export const createExam = async (values: ExamFormValues) => {
     const exam_result = await exam.save();
     // console.log("Exam saved");
     // console.log(exam_result);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_CREATE,
+      outcome: "success",
+      userId: session.user.id,
+      resource: "createExam",
+      message: `Created exam ${exam_result._id.toString()}`,
+    });
     return {
       success: true,
       status: 200,
     } 
   } catch (error) {
     // console.log(error)
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_CREATE,
+      outcome: "failure",
+      resource: "createExam",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return { 
       success: false, 
       error: "Internal Server Error", 

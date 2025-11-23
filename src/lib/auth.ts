@@ -3,6 +3,8 @@ import { Account } from "@/models";
 import type { NextAuthOptions } from "next-auth";
 import credentials from "next-auth/providers/credentials";
 import { compare } from "bcrypt-ts";
+import { logSecurityEvent } from "@/lib/securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -13,7 +15,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const email = credentials?.email;
         const password = credentials?.password;
 
@@ -45,13 +47,29 @@ export const authOptions: NextAuthOptions = {
         // --- VALIDATION END ---
 
         connectToMongoDB();
-        
+
         const user = await Account.findOne({
           email: email,
         });
 
-        if (!user) throw new Error("Invalid Credentials");
-        if (user.disabled) throw new Error("Account disabled");
+        if (!user) {
+          await logSecurityEvent({
+            event: SecurityEvent.AUTH_SIGNIN,
+            outcome: "failure",
+            email: credentials?.email,
+            message: "User not found",
+          });
+          throw new Error("Invalid Credentials");
+        }
+        if (user.disabled) {
+          await logSecurityEvent({
+            event: SecurityEvent.AUTH_SIGNIN,
+            outcome: "failure",
+            email: credentials?.email,
+            message: "User account is disabled",
+          });
+          throw new Error("Account disabled")
+        };
 
         const prevAttempt = {
           at: user.lastLoginAttemptAt,
@@ -69,6 +87,13 @@ export const authOptions: NextAuthOptions = {
             lastLoginAttemptAt: new Date(),
             lastLoginAttemptSuccess: false,
           });
+          await logSecurityEvent({
+            event: SecurityEvent.AUTH_SIGNIN,
+            outcome: "failure",
+            email: credentials?.email,
+            userId: user._id.toString(),
+            message: "Invalid password",
+          });
           throw new Error("Invalid Credentials");
         }
 
@@ -76,7 +101,7 @@ export const authOptions: NextAuthOptions = {
           lastLoginAttemptAt: new Date(),
           lastLoginAttemptSuccess: true,
         });
-
+        
         return {
           id: user._id.toString(),
           email: user.email,
@@ -137,4 +162,24 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+
+  events: {
+    async signIn({ user, account }) {
+      await logSecurityEvent({
+        event: SecurityEvent.AUTH_SIGNIN,
+        outcome: "success",
+        userId: (user as any)?.id,
+        email: (user as any)?.email,
+        metadata: { provider: account?.provider },
+      });
+    },
+    async signOut({ token }) {
+      await logSecurityEvent({
+        event: SecurityEvent.AUTH_SIGNOUT,
+        outcome: "success",
+        userId: token?.id as string,
+        email: token?.email as string,
+      });
+    },
+  }
 };
