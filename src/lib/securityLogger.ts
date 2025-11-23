@@ -50,6 +50,7 @@ export function validateWithLogging<T extends { safeParse(data: unknown): any }>
       userId: context.userId,
       resource: context.resource,
       metadata: { issues: result.error.issues },
+      message: String(result.error.issues)
     });
     throw result.error;
   }
@@ -58,7 +59,7 @@ export function validateWithLogging<T extends { safeParse(data: unknown): any }>
     outcome: "success",
     userId: context.userId,
     resource: context.resource,
-    metadata: { result: result.data }
+    metadata: { result: result.data },
   });
   return result.data as typeof result.data;
 }

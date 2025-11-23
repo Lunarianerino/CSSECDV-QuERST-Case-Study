@@ -5,6 +5,8 @@ import credentials from "next-auth/providers/credentials";
 import { compare } from "bcrypt-ts";
 import { logSecurityEvent } from "@/lib/securityLogger";
 import { SecurityEvent } from "@/models/securityLogs";
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -58,6 +60,7 @@ export const authOptions: NextAuthOptions = {
             outcome: "failure",
             email: credentials?.email,
             message: "User not found",
+            resource: 'authorize'
           });
           throw new Error("Invalid Credentials");
         }
@@ -67,9 +70,27 @@ export const authOptions: NextAuthOptions = {
             outcome: "failure",
             email: credentials?.email,
             message: "User account is disabled",
+            resource: 'authorize'
           });
           throw new Error("Account disabled")
         };
+
+        const now = Date.now();
+        if (user.lockUntil && user.lockUntil.getTime() > now) {
+          await Account.updateOne({ _id: user._id }, {
+            lastLoginAttemptAt: new Date(),
+            lastLoginAttemptSuccess: false,
+          });
+          await logSecurityEvent({
+            event: SecurityEvent.AUTH_ERROR,
+            outcome: "failure",
+            userId: user._id.toString(),
+            email: user.email,
+            message: `Account locked until ${user.lockUntil.toLocaleString()}`,
+            resource: 'authorize'
+          });
+          throw new Error("Account locked");
+        }
 
         const prevAttempt = {
           at: user.lastLoginAttemptAt,
@@ -83,16 +104,23 @@ export const authOptions: NextAuthOptions = {
 
         // console.log(user);
         if (!passwordMatch) {
+          const failedCount = (user.failedLoginCount || 0) + 1;
+          const shouldLock = failedCount >= MAX_FAILED_ATTEMPTS;
+          const lockUntil = shouldLock ? new Date(Date.now() + LOCK_DURATION_MS) : null;
           await Account.updateOne({ _id: user._id }, {
             lastLoginAttemptAt: new Date(),
             lastLoginAttemptSuccess: false,
+            failedLoginCount: shouldLock ? 0 : failedCount,
+            lockUntil: lockUntil,
+            lastFailedLoginAt: new Date(),
           });
           await logSecurityEvent({
             event: SecurityEvent.AUTH_SIGNIN,
             outcome: "failure",
             email: credentials?.email,
             userId: user._id.toString(),
-            message: "Invalid password",
+            message: lockUntil ? `Account locked until ${lockUntil.toLocaleString()}` : "Invalid password",
+            resource: 'authorize'
           });
           throw new Error("Invalid Credentials");
         }
@@ -100,8 +128,10 @@ export const authOptions: NextAuthOptions = {
         await Account.updateOne({ _id: user._id }, {
           lastLoginAttemptAt: new Date(),
           lastLoginAttemptSuccess: true,
+          failedLoginCount: 0,
+          lockUntil: null,
         });
-        
+
         return {
           id: user._id.toString(),
           email: user.email,
@@ -171,6 +201,7 @@ export const authOptions: NextAuthOptions = {
         userId: (user as any)?.id,
         email: (user as any)?.email,
         metadata: { provider: account?.provider },
+        resource: 'signIn'
       });
     },
     async signOut({ token }) {
@@ -179,6 +210,7 @@ export const authOptions: NextAuthOptions = {
         outcome: "success",
         userId: token?.id as string,
         email: token?.email as string,
+        resource: 'signOut'
       });
     },
   }

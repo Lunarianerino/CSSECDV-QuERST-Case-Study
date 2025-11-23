@@ -19,6 +19,7 @@ import {
   BarChart,
   Calendar,
   UserCog,
+  Logs,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -120,6 +121,11 @@ const getNavigationData = (userType: string | undefined) => {
           url: "/admin/programs/pairings",
         },
       ]
+    },
+    {
+      title: "Logs",
+      url: "/admin/logs",
+      icon: Logs
     },
     // {
     //   title: "Settings",
