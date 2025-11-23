@@ -10,7 +10,10 @@ export const register = async (values: any) => {
       await connectToMongoDB();
       const userFound = await Account.findOne({ email });
       if(userFound){
-        throw new Error("User already exists");
+        return {
+          success: false,
+          message: "Account already exists"
+        }
       }
       const user = new Account({
         name,

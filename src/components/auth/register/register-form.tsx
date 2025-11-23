@@ -56,7 +56,7 @@ export default function RegisterForm({ isRedirectEnabled = true }: RegisterFormP
         password: data.password,
       });
       if (!r.success) {
-        toast.error(r.message);
+        toast.error(r.message, {id: "register"});
         return;
       }
       const logiRes = await signIn("credentials", {
@@ -66,19 +66,17 @@ export default function RegisterForm({ isRedirectEnabled = true }: RegisterFormP
       })
 
       if (logiRes?.error) {
-        toast.error(logiRes.error);
+        toast.error(logiRes.error, {id: "register"});
         isRedirectEnabled && router.push("/login");
         return; 
       }
 
-      toast.success("Registration successful!");
+      toast.success("Registration successful!", {id: "register"});
       isRedirectEnabled && router.push("/onboarding");
     } catch (e) {
-      toast.error("An error occurred while registering");
+      toast.error("An unexpected error occured.", {id: "register"});
       return; 
-    }
-
-    toast.dismiss("register");
+    } 
   }
   return (
     <Form {...form}>
