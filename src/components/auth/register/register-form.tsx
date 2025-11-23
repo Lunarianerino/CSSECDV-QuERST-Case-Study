@@ -76,7 +76,10 @@ export default function RegisterForm({ isRedirectEnabled = true }: RegisterFormP
     } catch (e) {
       toast.error("An unexpected error occured.", {id: "register"});
       return; 
-    } 
+    } finally {
+      form.reset();
+      setIsLoading(false);
+    }
   }
   return (
     <Form {...form}>
