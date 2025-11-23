@@ -3,6 +3,7 @@ import { Account } from "@/models";
 import type { NextAuthOptions } from "next-auth";
 import credentials from "next-auth/providers/credentials";
 import { compare } from "bcrypt-ts";
+
 export const authOptions: NextAuthOptions = {
   providers: [
     credentials({
@@ -13,32 +14,69 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        const email = credentials?.email;
+        const password = credentials?.password;
+
+        // --- VALIDATION START ---
+
+        // 1. Check for existence
+        if (!email || !password) {
+          throw new Error("Please enter both email and password.");
+        }
+
+        // 2. Validate Data Length (Email)
+        // Standard email max length is usually 254, but you can set a lower logic cap.
+        if (email.length < 5 || email.length > 254) {
+          throw new Error("Invalid email length.");
+        }
+
+        // 3. Validate Data Range / Password Cap
+        // Min: 8 (Standard security)
+        // Max: 64 (Prevents DoS attacks on hashing algorithms and meets your "cap" requirement)
+        const MIN_PASS_LENGTH = 8;
+        const MAX_PASS_LENGTH = 64;
+
+        if (password.length < MIN_PASS_LENGTH || password.length > MAX_PASS_LENGTH) {
+          throw new Error(
+            `Password must be between ${MIN_PASS_LENGTH} and ${MAX_PASS_LENGTH} characters.`
+          );
+        }
+
+        // --- VALIDATION END ---
+
         connectToMongoDB();
+        
         const user = await Account.findOne({
-          email: credentials?.email,
-        })
+          email: email,
+        });
+
         if (!user) throw new Error("Invalid Credentials");
         if (user.disabled) throw new Error("Account disabled");
+
         const prevAttempt = {
           at: user.lastLoginAttemptAt,
           success: user.lastLoginAttemptSuccess,
-        }
+        };
+
         const passwordMatch = await compare(
-          credentials!.password.toString(),
+          password.toString(),
           user.password
         );
+
         // console.log(user);
         if (!passwordMatch) {
           await Account.updateOne({ _id: user._id }, {
             lastLoginAttemptAt: new Date(),
             lastLoginAttemptSuccess: false,
-          })
+          });
           throw new Error("Invalid Credentials");
         }
+
         await Account.updateOne({ _id: user._id }, {
           lastLoginAttemptAt: new Date(),
           lastLoginAttemptSuccess: true,
         });
+
         return {
           id: user._id.toString(),
           email: user.email,
