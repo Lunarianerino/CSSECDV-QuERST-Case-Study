@@ -20,6 +20,15 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getVarkResultsAction, VarkResult } from "@/lib/actions/varkActions";
 import { BfiResult, getBfiResultsAction } from "@/lib/actions/bfiActions";
+import { togglePermanentBan, updateUserOnboardedStatus, adminChangeUserPassword } from "@/lib/actions/userActions";
+import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { adminSetPasswordSchema, type AdminSetPasswordValues } from "@/lib/validations/auth";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 const localizer = momentLocalizer(moment);
 
 // Custom toolbar to remove navigation and date display
@@ -56,6 +65,14 @@ const UserProfilePage = () => {
   const [gettingBfiError, setGettingBfiError] = useState<string | null>(null);
   const [bfiResults, setBfiResults] = useState<BfiResult | null>(null);
   const [bfiLoading, setBfiLoading] = useState(false);
+  const [updatingBan, setUpdatingBan] = useState(false);
+  const [updatingOnboarding, setUpdatingOnboarding] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+
+  const passwordForm = useForm<AdminSetPasswordValues>({
+    resolver: zodResolver(adminSetPasswordSchema),
+    defaultValues: { newPassword: "", confirmPassword: "" },
+  });
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -87,6 +104,61 @@ const UserProfilePage = () => {
 
     fetchUserProfile();
   }, [id]);
+
+  const handleToggleBan = async (nextValue: boolean) => {
+    if (!profile) return;
+    setUpdatingBan(true);
+    try {
+      const res = await togglePermanentBan(nextValue, profile.id);
+      if (!res.success) {
+        toast.error(res.error || "Unable to update ban status");
+        return;
+      }
+      setProfile({ ...profile, disabled: res.data?.disabled ?? nextValue });
+      toast.success(nextValue ? "User permanently banned" : "User unbanned");
+    } catch (err) {
+      console.error(err);
+      toast.error("An error occurred while updating ban status");
+    } finally {
+      setUpdatingBan(false);
+    }
+  };
+
+  const handleReverseOnboarding = async () => {
+    if (!profile) return;
+    setUpdatingOnboarding(true);
+    try {
+      const res = await updateUserOnboardedStatus(false, profile.id);
+      if (!res.success) {
+        toast.error(res.error || "Failed to update onboarding status");
+        return;
+      }
+      setProfile({ ...profile, onboarded: false });
+      toast.success("Onboarding status reversed");
+    } catch (err) {
+      console.error(err);
+      toast.error("An error occurred while updating onboarding status");
+    } finally {
+      setUpdatingOnboarding(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (values: AdminSetPasswordValues) => {
+    if (!profile) return;
+    try {
+      const res = await adminChangeUserPassword(profile.id, values.newPassword, values.confirmPassword);
+      if (!res.success) {
+        toast.error(res.error || "Failed to change password");
+        return;
+      }
+      toast.success("Password updated");
+      setPasswordDialogOpen(false);
+      passwordForm.reset();
+    } catch (err) {
+      console.error(err);
+      toast.error("An error occurred while changing password");
+    }
+  };
 
   // Define day mapping once at the component level for consistency
   const dayMap: Record<string, number> = {
@@ -276,7 +348,37 @@ const UserProfilePage = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Onboarded:</span>
-                      <span className="font-medium">{profile.onboarded ? "Yes" : "No"}</span>
+                      <div className="flex items-center gap-2">
+                        {profile.onboarded && (
+                          <Button variant="destructive" size="sm" onClick={handleReverseOnboarding} disabled={updatingOnboarding}>
+                            {updatingOnboarding ? "Reverting..." : "Reverse"}
+                          </Button>
+                        )}
+                        <span className="font-medium">{profile.onboarded ? "Yes" : "No"}</span>
+
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Permanently banned:</span>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">{updatingBan ? "Updating..." : ""}</span>
+                        <Checkbox
+                          checked={Boolean(profile.disabled)}
+                          disabled={updatingBan}
+                          onCheckedChange={(value) => {
+                            if (value === true || value === false) {
+                              handleToggleBan(value);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Actions:</span>
+                      <Button variant="outline" size="sm" onClick={() => setPasswordDialogOpen(true)}>
+                        Change Password
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -321,18 +423,18 @@ const UserProfilePage = () => {
                         <span className="font-medium text-red-200">{gettingVarkError}</span>
                       </div>
                       <span className="font-medium">
-                          {canGenerateVark ? (
-                            <Button
-                              variant="outline"
-                              onClick={generateVarkResults}
-                              disabled={varkLoading}
-                            >
-                              {varkLoading ? "Generating..." : "Generate VARK"}
-                            </Button>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Not available yet</span>
-                          )}
-                        </span>
+                        {canGenerateVark ? (
+                          <Button
+                            variant="outline"
+                            onClick={generateVarkResults}
+                            disabled={varkLoading}
+                          >
+                            {varkLoading ? "Generating..." : "Generate VARK"}
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not available yet</span>
+                        )}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">BFI Results:</span>
@@ -592,6 +694,53 @@ const UserProfilePage = () => {
           </Tabs>
         </div>
       </div>
+      <Dialog open={passwordDialogOpen} onOpenChange={(open) => {
+        setPasswordDialogOpen(open);
+        if (!open) passwordForm.reset();
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>
+              Update the password for {profile.email}.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...passwordForm}>
+            <form onSubmit={passwordForm.handleSubmit(handlePasswordSubmit)} className="space-y-4">
+              <FormField
+                control={passwordForm.control}
+                name="newPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Enter new password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={passwordForm.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Re-enter new password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={passwordForm.formState.isSubmitting}>
+                {passwordForm.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Save Password
+              </Button>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

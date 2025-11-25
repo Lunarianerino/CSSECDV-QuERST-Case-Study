@@ -5,6 +5,10 @@ import { connectToMongoDB } from '@/lib/db';
 import { Account } from '@/models';
 import { onboardingSchema } from '@/lib/validations/auth';
 import { autoAssignExams } from '@/lib/actions/examActions';
+import { getSecurityQuestionPrompt } from '@/lib/security-questions';
+import { hashSync } from "bcrypt-ts";
+import { logSecurityEvent } from "@/lib/securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 //TODO: Replace with a server action
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +17,13 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session || !session.user?.email) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "user/onboard.POST",
+        message: "Unauthorized",
+        req: request,
+      });
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -24,16 +35,30 @@ export async function POST(request: NextRequest) {
     const validationResult = onboardingSchema.safeParse(body);
     
     if (!validationResult.success) {
+      await logSecurityEvent({
+        event: SecurityEvent.VALIDATION,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "user/onboard.POST",
+        metadata: { issues: validationResult.error.format() },
+        req: request,
+      });
       return NextResponse.json(
         { error: 'Invalid data', details: validationResult.error.format() },
         { status: 400 }
       );
     }
     
-    const { name, userType } = validationResult.data;
+    const { name, userType, securityQuestions } = validationResult.data;
     
     // Connect to MongoDB
     await connectToMongoDB();
+
+    const hashedSecurityQuestions = securityQuestions.map((question) => ({
+      questionId: question.questionId,
+      question: getSecurityQuestionPrompt(question.questionId) ?? question.questionId,
+      answerHash: hashSync(question.answer.toLowerCase(), 12),
+    }));
     
     // Update the user's profile
     const updatedUser = await Account.findOneAndUpdate(
@@ -41,12 +66,21 @@ export async function POST(request: NextRequest) {
       { 
         name,
         type: userType,
-        onboarded: true 
+        onboarded: true,
+        securityQuestions: hashedSecurityQuestions,
       },
       { new: true }
     );
     
     if (!updatedUser) {
+      await logSecurityEvent({
+        event: SecurityEvent.OPERATION_UPDATE,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "user/onboard.POST",
+        message: "User not found",
+        req: request,
+      });
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
@@ -60,6 +94,15 @@ export async function POST(request: NextRequest) {
       // TODO: Handle the error, possibly log it 
     }
     
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "user/onboard.POST",
+      message: "Onboarding completed",
+      req: request,
+    });
+
     return NextResponse.json(
       { 
         success: true,
@@ -75,6 +118,13 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Error in onboarding API:', error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_UPDATE,
+      outcome: "failure",
+      resource: "user/onboard.POST",
+      message: error instanceof Error ? error.message : String(error),
+      req: request,
+    });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

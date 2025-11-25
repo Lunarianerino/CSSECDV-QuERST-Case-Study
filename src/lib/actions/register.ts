@@ -12,6 +12,18 @@ export const register = async (values: any) => {
       await connectToMongoDB();
       const userFound = await Account.findOne({ email });
       if(userFound){
+        if (userFound.disabled) {
+          await logSecurityEvent({
+            event: SecurityEvent.ACCESS_DENIED,
+            outcome: "failure",
+            resource: "register",
+            message: `Account disabled for ${email}`,
+          });
+          return {
+            success: false,
+            message: "Permanently banned, please contact administrator for help"
+          }
+        }
         await logSecurityEvent({
           event: SecurityEvent.OPERATION_CREATE,
           outcome: "failure",

@@ -72,7 +72,7 @@ export const authOptions: NextAuthOptions = {
             message: "User account is disabled",
             resource: 'authorize'
           });
-          throw new Error("Account disabled")
+          throw new Error("Permanently banned, please contact administrator for help")
         };
 
         const now = Date.now();

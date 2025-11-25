@@ -18,6 +18,7 @@ export interface UserProfile {
   email: string;
   type: string;
   onboarded: boolean;
+  disabled?: boolean;
   schedule: any; // Weekly schedule from schedule action
   bfi_status: string;
   vark_status: string;
@@ -211,6 +212,7 @@ export async function getUserProfileAction(userId: string): Promise<UserProfile 
       email: user.email,
       type: user.type,
       onboarded: user.onboarded,
+      disabled: user.disabled,
       bfi_status: BFIStatus,
       vark_status: VARKStatus,
       schedule,

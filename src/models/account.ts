@@ -12,6 +12,17 @@ export interface IAccount extends Document {
   password: string;
   type: string;
   disabled: boolean;
+  securityQuestions?: {
+    questionId: string;
+    question: string;
+    answerHash: string;
+  }[];
+  passwordReset?: {
+    tokenHash: string;
+    expiresAt: Date;
+    attempts: number;
+    verified: boolean;
+  };
   passwordHistory: [{ hash: string; changedAt: Date }];
   passwordChangedAt: Date;
   lastLoginAttemptAt: Date;
@@ -29,6 +40,22 @@ export const AccountSchema: Schema = new Schema(
     type: { type: String, required: true, enum: AccountType, default: AccountType.UNKNOWN },
     onboarded: { type: Boolean, required: true, default: false },
     disabled: { type: Boolean, required: true, default: false },
+    securityQuestions: {
+      type: [
+        {
+          questionId: { type: String, required: true },
+          question: { type: String, required: true },
+          answerHash: { type: String, required: true },
+        },
+      ],
+      default: [],
+    },
+    passwordReset: {
+      tokenHash: { type: String },
+      expiresAt: { type: Date },
+      attempts: { type: Number, default: 0 },
+      verified: { type: Boolean, default: false },
+    },
     passwordHistory: {
       type: [
         {

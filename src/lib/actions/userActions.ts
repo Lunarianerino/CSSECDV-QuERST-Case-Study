@@ -5,10 +5,11 @@ import { AccountType } from "@/models/account";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { BasicAccountInfo } from "@/types/accounts";
-import { CreateUserFormValues } from "@/lib/validations/auth";
+import { CreateUserFormValues, ResetPasswordWithTokenValues, adminSetPasswordSchema, changePasswordSchema } from "@/lib/validations/auth";
 import { compareSync } from "bcrypt-ts";
 import { logSecurityEvent } from "../securityLogger";
 import { SecurityEvent } from "@/models/securityLogs";
+import { createHash } from "crypto";
 
 
 /**
@@ -211,7 +212,7 @@ export async function createUser(form: CreateUserFormValues): Promise<UserAction
 			email: form.email,
 			password: form.password,
 			type: form.userType,
-			onboarded: true
+			onboarded: false
 		})
 
 		await user.save();
@@ -331,6 +332,199 @@ export async function disableUser(disabled: boolean, userId: string): Promise<Us
 			status: 500,
 			error: "Internal Server Error",
 		}
+	}
+}
+
+export async function togglePermanentBan(disabled: boolean, userId: string): Promise<UserActionResponse> {
+	try {
+		const session = await getServerSession(authOptions);
+		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "togglePermanentBan",
+				message: "Unauthorized action",
+			});
+			return { success: false, status: 401, error: "Unauthorized action" };
+		}
+
+		await connectToMongoDB();
+		const user = await Account.findById(userId);
+
+		if (!user || user.type === AccountType.ADMIN || userId === session.user.id) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "togglePermanentBan",
+				message: "Attempt to ban self/admin or user not found",
+			});
+			return { success: false, status: 401, error: "This account can't be updated" };
+		}
+
+		user.disabled = disabled;
+		await user.save();
+
+		const formatted: BasicAccountInfo = {
+			id: user._id.toString(),
+			name: user.name,
+			email: user.email,
+			type: user.type,
+			onboarded: user.onboarded,
+			disabled: user.disabled,
+		};
+
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "togglePermanentBan",
+			message: `${disabled ? "Permanently disabled" : "Unbanned"} user ${userId}`,
+		});
+
+		return { success: true, status: 200, data: formatted };
+	} catch (error) {
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "togglePermanentBan",
+			message: error instanceof Error ? error.message : String(error),
+		});
+		return { success: false, status: 500, error: "Internal Server Error" };
+	}
+}
+
+export async function updateUserOnboardedStatus(onboarded: boolean, userId: string): Promise<UserActionResponse> {
+	try {
+		const session = await getServerSession(authOptions);
+		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "updateUserOnboardedStatus",
+				message: "Unauthorized action",
+			});
+			return { success: false, status: 401, error: "Unauthorized action" };
+		}
+
+		await connectToMongoDB();
+		const user = await Account.findById(userId);
+
+		if (!user || user.type === AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "updateUserOnboardedStatus",
+				message: "Attempt to modify self/admin or user not found",
+			});
+			return { success: false, status: 401, error: "This account can't be updated" };
+		}
+
+		user.onboarded = onboarded;
+		await user.save();
+
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "updateUserOnboardedStatus",
+			message: `Set onboarded=${onboarded} for user ${userId}`,
+		});
+
+		return {
+			success: true,
+			status: 200,
+			data: {
+				id: user._id.toString(),
+				name: user.name,
+				email: user.email,
+				type: user.type,
+				onboarded: user.onboarded,
+				disabled: user.disabled,
+			},
+		};
+	} catch (error) {
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "updateUserOnboardedStatus",
+			message: error instanceof Error ? error.message : String(error),
+		});
+		return { success: false, status: 500, error: "Internal Server Error" };
+	}
+}
+
+export async function adminChangeUserPassword(userId: string, newPassword: string, confirmPassword: string): Promise<UserActionResponse> {
+	try {
+		const session = await getServerSession(authOptions);
+		if (!session || session.user?.type !== AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session?.user?.id,
+				resource: "adminChangeUserPassword",
+				message: "Unauthorized action",
+			});
+			return { success: false, status: 401, error: "Unauthorized action" };
+		}
+
+		const parsed = adminSetPasswordSchema.parse({ newPassword, confirmPassword });
+
+		await connectToMongoDB();
+		const user = await Account.findById(userId);
+		if (!user) {
+			return { success: false, status: 404, error: "User does not exist" };
+		}
+
+		if (user.disabled) {
+			return { success: false, status: 403, error: "Permanently banned, please contact administrator for help" };
+		}
+
+		const history = user.passwordHistory || [];
+		const reused =
+			compareSync(parsed.newPassword, user.password) ||
+			history.some((entry) => compareSync(parsed.newPassword, entry.hash));
+
+		if (reused) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "adminChangeUserPassword",
+				message: "Password reuse detected",
+			});
+			return { success: false, status: 400, error: "Cannot reuse a recent password" };
+		}
+
+		const updatedHistory = [
+			{ hash: user.password, changedAt: new Date() },
+			...(history ?? []),
+		].slice(0, 5);
+
+		user.passwordHistory = updatedHistory;
+		user.password = parsed.newPassword;
+		await user.save();
+
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: session.user?.id,
+			resource: "adminChangeUserPassword",
+			message: `Password changed for user ${userId}`,
+		});
+
+		return { success: true, status: 200 };
+	} catch (error) {
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "adminChangeUserPassword",
+			message: error instanceof Error ? error.message : String(error),
+		});
+		return { success: false, status: 500, error: "Internal Server Error" };
 	}
 }
 
@@ -492,4 +686,130 @@ export async function changePassword(oldPassword: string, newPassword: string, c
 		}
 	}
 
+}
+
+export async function resetPasswordWithSecurityToken(input: ResetPasswordWithTokenValues): Promise<UserActionResponse> {
+	try {
+		const { email, token, newPassword, confirmPassword } = input;
+
+		if (newPassword !== confirmPassword) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				resource: "resetPasswordWithSecurityToken",
+				message: "New password mismatch",
+				email,
+			});
+			return { success: false, status: 400, error: "Passwords do not match" };
+		}
+
+		await connectToMongoDB();
+		const user = await Account.findOne({ email });
+		if (!user || !user.passwordReset || !user.passwordReset.tokenHash) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				resource: "resetPasswordWithSecurityToken",
+				message: "Invalid or expired token",
+				email,
+			});
+			return { success: false, status: 400, error: "Invalid or expired reset request" };
+		}
+
+		if (user.disabled) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				resource: "resetPasswordWithSecurityToken",
+				message: "Account permanently disabled",
+				email,
+			});
+			return { success: false, status: 403, error: "Permanently banned, please contact administrator for help" };
+		}
+
+		if (!user.passwordReset.expiresAt || user.passwordReset.expiresAt.getTime() < Date.now()) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				resource: "resetPasswordWithSecurityToken",
+				message: "Reset token expired",
+				email,
+			});
+			user.passwordReset = undefined;
+			await user.save();
+			return { success: false, status: 400, error: "Reset token expired" };
+		}
+
+		if (!user.passwordReset.verified) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				resource: "resetPasswordWithSecurityToken",
+				message: "Identity not verified",
+				email,
+			});
+			return { success: false, status: 400, error: "Identity not verified" };
+		}
+
+		const providedHash = createHash("sha256").update(token).digest("hex");
+		if (providedHash !== user.passwordReset.tokenHash) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				resource: "resetPasswordWithSecurityToken",
+				message: "Invalid token hash",
+				email,
+			});
+			return { success: false, status: 400, error: "Invalid or expired reset request" };
+		}
+
+		const history = user.passwordHistory || [];
+		const reused =
+			compareSync(newPassword, user.password) ||
+			history.some((entry) => compareSync(newPassword, entry.hash));
+
+		if (reused) {
+			await logSecurityEvent({
+				event: SecurityEvent.OPERATION_UPDATE,
+				outcome: "failure",
+				resource: "resetPasswordWithSecurityToken",
+				message: "Password reuse detected",
+				email,
+			});
+			return {
+				success: false,
+				status: 400,
+				error: "You cannot reuse a recent password",
+			};
+		}
+
+		const updatedHistory = [
+			{ hash: user.password, changedAt: new Date() },
+			...(history ?? []),
+		].slice(0, 5);
+
+		user.passwordHistory = updatedHistory;
+		user.password = newPassword; // pre-save hook will hash this
+		user.passwordReset = undefined; // clear reset token
+		await user.save();
+
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "success",
+			userId: user._id.toString(),
+			resource: "resetPasswordWithSecurityToken",
+			message: "Password reset via security questions",
+			email,
+		});
+
+		return { success: true, status: 200 };
+	} catch (error) {
+		await logSecurityEvent({
+			event: SecurityEvent.OPERATION_UPDATE,
+			outcome: "failure",
+			resource: "resetPasswordWithSecurityToken",
+			message: error instanceof Error ? error.message : String(error),
+		});
+		return { success: false, status: 500, error: "Internal Server Error" };
+	}
 }

@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AccountType } from "@/models/account";
 import { UserExamStatus } from "@/models/examStatus";
+import { logSecurityEvent } from "@/lib/securityLogger";
+import { SecurityEvent } from "@/models/securityLogs";
 
 export async function GET() {
   try {
@@ -12,11 +14,24 @@ export async function GET() {
 
     const session = await getServerSession(authOptions);
     if (!session) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        resource: "exam-submissions.GET",
+        message: "Not authenticated",
+      });
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     // Only admins and tutors can view submissions
     if (session.user.type !== AccountType.ADMIN && session.user.type !== AccountType.TUTOR) {
+      await logSecurityEvent({
+        event: SecurityEvent.ACCESS_DENIED,
+        outcome: "failure",
+        userId: session.user?.id,
+        resource: "exam-submissions.GET",
+        message: "Not authorized",
+      });
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
@@ -61,9 +76,23 @@ export async function GET() {
       graded: submission.examId.graded
     }));
 
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "success",
+      userId: session.user?.id,
+      resource: "exam-submissions.GET",
+      message: `Fetched ${formattedSubmissions.length} exam submissions`,
+    });
+
     return NextResponse.json(formattedSubmissions);
   } catch (error) {
     console.error("Error fetching exam submissions:", error);
+    await logSecurityEvent({
+      event: SecurityEvent.OPERATION_READ,
+      outcome: "failure",
+      resource: "exam-submissions.GET",
+      message: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json({ error: "Failed to fetch submissions" }, { status: 500 });
   }
 }

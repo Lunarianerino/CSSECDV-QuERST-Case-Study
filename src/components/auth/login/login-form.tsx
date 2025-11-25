@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { loginSchema, LoginFormValues } from "@/lib/validations/auth";
 import { useMutation } from "@tanstack/react-query";
@@ -125,6 +126,11 @@ export default function LoginForm() {
               </div>
             </FormControl>
             <FormMessage />
+            <div className="mt-2 text-right">
+              <Link href="/forgot-password" className="text-sm text-primary underline hover:text-primary/80">
+                Forgot password?
+              </Link>
+            </div>
           </FormItem>
         )}
       />
