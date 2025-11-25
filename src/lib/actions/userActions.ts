@@ -478,9 +478,15 @@ export async function adminChangeUserPassword(userId: string, newPassword: strin
 		if (!user) {
 			return { success: false, status: 404, error: "User does not exist" };
 		}
-
-		if (user.disabled) {
-			return { success: false, status: 403, error: "Permanently banned, please contact administrator for help" };
+		if (user.type === AccountType.ADMIN) {
+			await logSecurityEvent({
+				event: SecurityEvent.ACCESS_DENIED,
+				outcome: "failure",
+				userId: session.user?.id,
+				resource: "adminChangeUserPassword",
+				message: "Attempt to change another admin's password",
+			});
+			return { success: false, status: 401, error: "This account can't be updated" };
 		}
 
 		const history = user.passwordHistory || [];

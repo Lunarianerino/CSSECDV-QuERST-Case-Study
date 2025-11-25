@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 			const stored = user.securityQuestions?.find(
 				(q) => q.questionId === answer.questionId
 			);
-			if (!stored || !compareSync(answer.answer, stored.answerHash)) {
+			if (!stored || !compareSync(answer.answer.toLowerCase(), stored.answerHash)) {
 				allValid = false;
 				break;
 			}
